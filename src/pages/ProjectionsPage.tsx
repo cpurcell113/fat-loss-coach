@@ -19,7 +19,7 @@ export function ProjectionsPage() {
         <Card>
           <div className="text-center">
             <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mb-2 ${
-              pace === 'ahead' ? 'bg-primary/20 text-primary' :
+              pace === 'ahead' ? 'bg-gold/20 text-gold' :
               pace === 'on-track' ? 'bg-success/20 text-success' :
               pace === 'behind' ? 'bg-warning/20 text-warning' : 'bg-surface-alt text-muted'
             }`}>
@@ -60,7 +60,7 @@ export function ProjectionsPage() {
               const prev = i > 0 ? entries[i - 1] : null;
               const weekDelta = prev ? entry.weight - prev.weight : 0;
               return (
-                <div key={entry.id} className="flex items-center justify-between py-1.5 text-sm border-b border-white/5 last:border-0">
+                <div key={entry.id} className="flex items-center justify-between py-1.5 text-sm border-b border-gold/10 last:border-0">
                   <span className="text-muted">{entry.date}</span>
                   <div className="flex items-center gap-3">
                     <span className="tabular-nums font-medium">{entry.weight} lbs</span>

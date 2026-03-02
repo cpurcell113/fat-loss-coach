@@ -78,7 +78,7 @@ export function SettingsPage() {
       <PageHeader
         title="Settings"
         right={
-          <button onClick={() => navigate(-1)} className="text-sm text-primary">
+          <button onClick={() => navigate(-1)} className="text-sm text-gold">
             Done
           </button>
         }
@@ -93,11 +93,11 @@ export function SettingsPage() {
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
             placeholder="sk-ant-..."
-            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/50 mb-2"
+            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10 mb-2"
           />
           <button
             onClick={handleSaveKey}
-            className={`w-full py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success' : 'bg-primary'}`}
+            className={`w-full py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success' : 'bg-gold text-surface-dark'}`}
           >
             {saved ? '✓ Saved' : 'Save API Key'}
           </button>
@@ -108,11 +108,11 @@ export function SettingsPage() {
           <h3 className="text-sm font-medium mb-3">Data</h3>
           <div className="space-y-2">
             <button onClick={handleExport} className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm">
-              <Download size={16} className="text-primary" />
+              <Download size={16} className="text-gold" />
               Export Full Backup
             </button>
             <button onClick={handleImport} className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm">
-              <Upload size={16} className="text-primary" />
+              <Upload size={16} className="text-gold" />
               Import Backup
             </button>
             <button onClick={handleClearChat} className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm">

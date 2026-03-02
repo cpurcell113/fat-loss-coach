@@ -27,16 +27,16 @@ export function ProjectionChart({
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ top: 5, right: 5, bottom: 0, left: -15 }}>
-        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8a8578' }} />
         <YAxis
           domain={[215, 255]}
-          tick={{ fontSize: 10, fill: '#94a3b8' }}
+          tick={{ fontSize: 10, fill: '#8a8578' }}
         />
         <Tooltip
-          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+          contentStyle={{ backgroundColor: '#141414', border: '1px solid rgba(212,168,83,0.2)', borderRadius: 8, fontSize: 12 }}
         />
         <ReferenceLine y={220} stroke="#22c55e" strokeDasharray="3 3" strokeOpacity={0.5} />
-        <Line type="monotone" dataKey="actual" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} connectNulls={false} />
+        <Line type="monotone" dataKey="actual" stroke="#d4a853" strokeWidth={2} dot={{ fill: '#d4a853', r: 3 }} connectNulls={false} />
         <Line type="monotone" dataKey="target" stroke="#f59e0b" strokeWidth={1} strokeDasharray="5 5" dot={{ fill: '#f59e0b', r: 3 }} connectNulls />
       </LineChart>
     </ResponsiveContainer>

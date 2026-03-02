@@ -29,15 +29,19 @@ export interface DailyCheckIn {
   id: string;
   date: DateString;
   sleepHours: number;
-  sleepQuality: number;
-  energyLevel: number;
-  stressLevel: number;
+  sleepQuality: number;   // 1-5
+  energyLevel: number;    // 1-10
+  stressLevel: number;    // 1-10
+  stressSource: string | null; // 'Work' | 'Financial' | 'Family' | 'Health' | 'All clear'
+  fastingStatus: 'fasting' | 'window-open';
+  oneWord: string;
   soreness: number;
   hunger: number;
   mood: number;
   digestion: number;
   didCardio: boolean;
   didResistance: boolean;
+  claudeDirective: string | null;
   notes: string;
   createdAt: string;
 }
@@ -45,10 +49,11 @@ export interface DailyCheckIn {
 export interface SprintSession {
   id: string;
   date: DateString;
-  type: 'echo-bike' | 'assault-bike' | 'rower' | 'other';
+  type: 'treadmill' | 'echo-bike' | 'assault-bike' | 'rower' | 'other';
   rounds: number;
   workSeconds: number;
   restSeconds: number;
+  distance: number | null; // miles, for treadmill
   avgCalPerRound: number | null;
   peakCalPerRound: number | null;
   totalCalories: number | null;
@@ -56,6 +61,26 @@ export interface SprintSession {
   peakHeartRate: number | null;
   rpe: number;
   notes: string;
+  createdAt: string;
+}
+
+export interface Exercise {
+  name: string;
+  sets: number;
+  reps: string;
+  weight: number | null;
+  rpe: number | null;
+  notes: string;
+}
+
+export interface StrengthSession {
+  id: string;
+  date: DateString;
+  label: string; // 'A' | 'B' | 'C' or custom
+  exercises: Exercise[];
+  duration: number | null;
+  notes: string;
+  rpe: number;
   createdAt: string;
 }
 

@@ -70,7 +70,7 @@ export function BloodworkPage() {
             value={labName}
             onChange={e => setLabName(e.target.value)}
             placeholder="Lab name (e.g. Quest, LabCorp)"
-            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/50 mb-3"
+            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 mb-3"
           />
 
           <div className="flex gap-2 mb-3">
@@ -88,13 +88,13 @@ export function BloodworkPage() {
               value={markerValue}
               onChange={e => setMarkerValue(e.target.value)}
               placeholder="Value"
-              className="w-24 bg-surface-alt rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-24 bg-surface-alt rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30"
               inputMode="decimal"
             />
             <button
               onClick={addMarker}
               disabled={!markerValue}
-              className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center disabled:opacity-40"
+              className="w-10 h-10 bg-gold text-surface-dark rounded-lg flex items-center justify-center disabled:opacity-40"
             >
               <Plus size={18} />
             </button>
@@ -122,7 +122,7 @@ export function BloodworkPage() {
             onClick={handleSave}
             disabled={markers.length === 0}
             className={`w-full py-3 rounded-xl font-semibold active:scale-[0.98] transition-all disabled:opacity-40 ${
-              saved ? 'bg-success' : 'bg-primary'
+              saved ? 'bg-success' : 'bg-gold text-surface-dark'
             }`}
           >
             {saved ? '✓ Saved!' : 'Save Lab Results'}

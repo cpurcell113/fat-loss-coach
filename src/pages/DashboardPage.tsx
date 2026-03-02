@@ -36,14 +36,14 @@ export function DashboardPage() {
         </div>
         <div className="h-2 bg-surface-alt rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary rounded-full transition-all"
+            className="h-full bg-gold rounded-full transition-all"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
         {projections.pace && (
           <p className={`text-xs mt-2 ${
             projections.pace === 'on-track' ? 'text-success' :
-            projections.pace === 'ahead' ? 'text-primary' : 'text-warning'
+            projections.pace === 'ahead' ? 'text-gold' : 'text-warning'
           }`}>
             {projections.pace === 'ahead' && 'Ahead of schedule'}
             {projections.pace === 'on-track' && 'On track'}
@@ -135,19 +135,19 @@ export function DashboardPage() {
       {/* Quick Nav */}
       <div className="grid grid-cols-2 gap-3">
         <Card onClick={() => navigate('/log/performance')} className="flex items-center gap-3">
-          <Activity size={20} className="text-primary" />
+          <Activity size={20} className="text-gold" />
           <span className="text-sm">Performance</span>
         </Card>
         <Card onClick={() => navigate('/log/bloodwork')} className="flex items-center gap-3">
-          <TestTube2 size={20} className="text-primary" />
+          <TestTube2 size={20} className="text-gold" />
           <span className="text-sm">Bloodwork</span>
         </Card>
         <Card onClick={() => navigate('/projections')} className="flex items-center gap-3">
-          <TrendingUp size={20} className="text-primary" />
+          <TrendingUp size={20} className="text-gold" />
           <span className="text-sm">Projections</span>
         </Card>
         <Card onClick={() => navigate('/settings')} className="flex items-center gap-3">
-          <Download size={20} className="text-primary" />
+          <Download size={20} className="text-gold" />
           <span className="text-sm">Export</span>
         </Card>
       </div>

@@ -1,12 +1,11 @@
 import { createHashRouter, RouterProvider } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
+import { HomePage } from './pages/HomePage';
+import { TrainPage } from './pages/TrainPage';
+import { FuelPage } from './pages/FuelPage';
+import { BodyPage } from './pages/BodyPage';
 import { CoachPage } from './pages/CoachPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { LogPage } from './pages/LogPage';
 import { CheckInPage } from './pages/CheckInPage';
-import { NutritionPage } from './pages/NutritionPage';
-import { BodyCompPage } from './pages/BodyCompPage';
-import { PerformancePage } from './pages/PerformancePage';
 import { BloodworkPage } from './pages/BloodworkPage';
 import { ProjectionsPage } from './pages/ProjectionsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -17,14 +16,13 @@ const router = createHashRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <CoachPage /> },
-      { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'log', element: <LogPage /> },
-      { path: 'log/check-in', element: <CheckInPage /> },
-      { path: 'log/nutrition', element: <NutritionPage /> },
-      { path: 'log/body-comp', element: <BodyCompPage /> },
-      { path: 'log/performance', element: <PerformancePage /> },
-      { path: 'log/bloodwork', element: <BloodworkPage /> },
+      { index: true, element: <HomePage /> },
+      { path: 'train', element: <TrainPage /> },
+      { path: 'fuel', element: <FuelPage /> },
+      { path: 'body', element: <BodyPage /> },
+      { path: 'coach', element: <CoachPage /> },
+      { path: 'check-in', element: <CheckInPage /> },
+      { path: 'bloodwork', element: <BloodworkPage /> },
       { path: 'projections', element: <ProjectionsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],

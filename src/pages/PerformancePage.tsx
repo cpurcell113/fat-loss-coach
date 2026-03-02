@@ -28,6 +28,7 @@ export function PerformancePage() {
       rounds: typeof rounds === 'number' ? rounds : 20,
       workSeconds: 15,
       restSeconds: 45,
+      distance: null,
       avgCalPerRound: typeof avgCalPerRound === 'number' ? avgCalPerRound : null,
       peakCalPerRound: null,
       totalCalories: typeof totalCalories === 'number' ? totalCalories : null,
@@ -77,13 +78,13 @@ export function PerformancePage() {
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="How did the session feel..."
-              className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30"
             />
 
             <button
               onClick={handleSave}
               className={`w-full py-3 rounded-xl font-semibold active:scale-[0.98] transition-all ${
-                saved ? 'bg-success' : 'bg-primary'
+                saved ? 'bg-success' : 'bg-gold text-surface-dark'
               }`}
             >
               {saved ? '✓ Saved!' : 'Save Session'}
@@ -97,7 +98,7 @@ export function PerformancePage() {
             <h3 className="text-sm font-medium mb-3">Recent Sessions</h3>
             <div className="space-y-2">
               {[...sessions].reverse().slice(0, 10).map(s => (
-                <div key={s.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                <div key={s.id} className="flex items-center justify-between py-2 border-b border-gold/10 last:border-0">
                   <div>
                     <p className="text-sm font-medium">{s.rounds} rounds · RPE {s.rpe}/10</p>
                     <p className="text-xs text-muted">

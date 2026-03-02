@@ -66,7 +66,7 @@ export function BodyCompPage() {
                     type="button"
                     onClick={() => setSource(s)}
                     className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
-                      source === s ? 'bg-primary text-white' : 'bg-surface-alt text-muted'
+                      source === s ? 'bg-gold text-surface-dark' : 'bg-surface-alt text-muted'
                     }`}
                   >
                     {s.toUpperCase()}
@@ -79,14 +79,14 @@ export function BodyCompPage() {
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Notes..."
-              className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30"
             />
 
             <button
               onClick={handleSave}
               disabled={typeof weight !== 'number'}
               className={`w-full py-3 rounded-xl font-semibold active:scale-[0.98] transition-all disabled:opacity-40 ${
-                saved ? 'bg-success' : 'bg-primary'
+                saved ? 'bg-success' : 'bg-gold text-surface-dark'
               }`}
             >
               {saved ? '✓ Saved!' : 'Save Measurement'}
@@ -107,7 +107,7 @@ export function BodyCompPage() {
           <h3 className="text-sm font-medium mb-3">History</h3>
           <div className="space-y-2">
             {[...entries].reverse().map(entry => (
-              <div key={entry.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+              <div key={entry.id} className="flex items-center justify-between py-2 border-b border-gold/10 last:border-0">
                 <div>
                   <p className="text-sm font-medium tabular-nums">{entry.weight} lbs</p>
                   <p className="text-xs text-muted">

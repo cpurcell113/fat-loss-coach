@@ -1,19 +1,19 @@
-import { PROGRAM_START, PROGRAM_END, BASELINE } from '../constants/baseline';
+import { PROGRAM_START, PROGRAM_END, BASELINE, HISTORICAL_PEAK, TARGETS } from '../constants/baseline';
 import { MACRO_TARGETS } from '../constants/macros';
 import type { AppSettings, BodyCompEntry } from '../types';
 import { getSettings, setSettings, getCollection, setCollection } from './storage';
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 const DEFAULT_SETTINGS: AppSettings = {
   apiKey: '',
   startDate: PROGRAM_START,
   endDate: PROGRAM_END,
   startWeight: BASELINE.weight,
-  targetWeight: 220,
-  targetBfPercent: 12.5,
-  targetMuscleMassMin: 110,
-  targetMuscleMassMax: 113,
+  targetWeight: TARGETS.weight,
+  targetBfPercent: TARGETS.bodyFatPercent,
+  targetMuscleMassMin: TARGETS.muscleMassMin,
+  targetMuscleMassMax: TARGETS.muscleMassMax,
   macroTargets: MACRO_TARGETS,
   onboardingComplete: false,
 };
@@ -25,21 +25,51 @@ export function runMigrations(): void {
     if (!getSettings<AppSettings>('settings')) {
       setSettings('settings', DEFAULT_SETTINGS);
     }
-    // Seed baseline body comp entry
+  }
+
+  if (stored < 2) {
+    // Seed both InBody scans: Aug 2025 peak + Feb 2026 baseline
     const existing = getCollection<BodyCompEntry>('body_comp');
-    if (existing.length === 0) {
-      const baseline: BodyCompEntry = {
+    const hasPeak = existing.some(e => e.id === 'peak-2025');
+    const hasBaseline = existing.some(e => e.id === 'baseline');
+    const toAdd: BodyCompEntry[] = [];
+
+    if (!hasPeak) {
+      toAdd.push({
+        id: 'peak-2025',
+        date: HISTORICAL_PEAK.date,
+        weight: HISTORICAL_PEAK.weight,
+        muscleMass: HISTORICAL_PEAK.muscleMass,
+        bodyFatPercent: HISTORICAL_PEAK.bodyFatPercent,
+        ecwRatio: HISTORICAL_PEAK.ecwRatio,
+        notes: HISTORICAL_PEAK.label,
+        source: 'inbody',
+        createdAt: new Date(HISTORICAL_PEAK.date + 'T12:00:00').toISOString(),
+      });
+    }
+
+    if (!hasBaseline) {
+      toAdd.push({
         id: 'baseline',
         date: BASELINE.date,
         weight: BASELINE.weight,
         muscleMass: BASELINE.muscleMass,
         bodyFatPercent: BASELINE.bodyFatPercent,
         ecwRatio: BASELINE.ecwRatio,
-        notes: 'Baseline InBody scan',
+        notes: BASELINE.label,
         source: 'inbody',
-        createdAt: new Date().toISOString(),
-      };
-      setCollection('body_comp', [baseline]);
+        createdAt: new Date(BASELINE.date + 'T12:00:00').toISOString(),
+      });
+    }
+
+    if (toAdd.length > 0) {
+      const sorted = [...existing, ...toAdd].sort((a, b) => a.date.localeCompare(b.date));
+      setCollection('body_comp', sorted);
+    }
+
+    // Ensure settings exist
+    if (!getSettings<AppSettings>('settings')) {
+      setSettings('settings', DEFAULT_SETTINGS);
     }
   }
 

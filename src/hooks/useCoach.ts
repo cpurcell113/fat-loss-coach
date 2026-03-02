@@ -60,8 +60,8 @@ export function useCoach(
 
       const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
 
-      const stream = await client.messages.stream({
-        model: 'claude-sonnet-4-5-20250929',
+      const stream = client.messages.stream({
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         system: systemPrompt,
         messages: apiMessages,

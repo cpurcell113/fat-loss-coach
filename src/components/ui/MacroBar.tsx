@@ -3,7 +3,7 @@ export function MacroBar({
   value,
   min,
   max,
-  color = 'bg-primary',
+  color = 'bg-gold',
 }: {
   label: string;
   value: number;

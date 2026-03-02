@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/fat-loss-coach/',
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -13,19 +13,19 @@ export default defineConfig({
       devOptions: { enabled: true },
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Fat Loss Coach',
-        short_name: 'FLCoach',
-        description: '12-week body recomposition AI coach',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        name: 'All In',
+        short_name: 'All In',
+        description: "My family won't need to heal from the work I didn't do.",
+        theme_color: '#0d0d0d',
+        background_color: '#0d0d0d',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
-          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/favicon.svg', sizes: '192x192', type: 'image/svg+xml' },
+          { src: '/favicon.svg', sizes: '512x512', type: 'image/svg+xml' },
+          { src: '/favicon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
       workbox: {

@@ -61,8 +61,8 @@ export function LogPage() {
       <div className="px-4 py-4 space-y-2">
         {items.map(item => (
           <Card key={item.label} onClick={() => navigate(item.route)} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <item.icon size={20} className="text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
+              <item.icon size={20} className="text-gold" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{item.label}</p>

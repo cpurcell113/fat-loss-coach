@@ -31,7 +31,7 @@ export function QuickInput({
         <button
           type="button"
           onClick={() => onChange(Math.max(min, numVal - step))}
-          className="w-10 h-10 rounded-lg bg-surface-alt flex items-center justify-center active:bg-white/10 transition-colors"
+          className="w-10 h-10 rounded-lg bg-surface-alt border border-gold/10 flex items-center justify-center active:bg-gold/10 transition-colors"
         >
           <Minus size={16} />
         </button>
@@ -43,7 +43,7 @@ export function QuickInput({
               const v = e.target.value;
               onChange(v === '' ? '' : Math.min(max, Math.max(min, Number(v))));
             }}
-            className="w-full h-10 bg-surface-alt rounded-lg px-3 text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full h-10 bg-surface-alt rounded-lg px-3 text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-gold/30"
             inputMode="decimal"
           />
           {unit && (
@@ -53,7 +53,7 @@ export function QuickInput({
         <button
           type="button"
           onClick={() => onChange(Math.min(max, numVal + step))}
-          className="w-10 h-10 rounded-lg bg-surface-alt flex items-center justify-center active:bg-white/10 transition-colors"
+          className="w-10 h-10 rounded-lg bg-surface-alt border border-gold/10 flex items-center justify-center active:bg-gold/10 transition-colors"
         >
           <Plus size={16} />
         </button>

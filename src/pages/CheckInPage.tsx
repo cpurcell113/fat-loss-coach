@@ -32,12 +32,16 @@ export function CheckInPage() {
       sleepQuality,
       energyLevel,
       stressLevel,
+      stressSource: todayEntry?.stressSource ?? null,
+      fastingStatus: todayEntry?.fastingStatus ?? 'fasting',
+      oneWord: todayEntry?.oneWord ?? '',
       soreness,
       hunger,
       mood,
       digestion,
       didCardio,
       didResistance,
+      claudeDirective: todayEntry?.claudeDirective ?? null,
       notes,
       createdAt: todayEntry?.createdAt || new Date().toISOString(),
     };
@@ -80,7 +84,7 @@ export function CheckInPage() {
             type="button"
             onClick={() => setDidResistance(!didResistance)}
             className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
-              didResistance ? 'bg-primary text-white' : 'bg-surface-alt text-muted'
+              didResistance ? 'bg-gold text-surface-dark' : 'bg-surface-alt text-muted'
             }`}
           >
             🏋️ Resistance
@@ -89,7 +93,7 @@ export function CheckInPage() {
             type="button"
             onClick={() => setDidCardio(!didCardio)}
             className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
-              didCardio ? 'bg-primary text-white' : 'bg-surface-alt text-muted'
+              didCardio ? 'bg-gold text-surface-dark' : 'bg-surface-alt text-muted'
             }`}
           >
             🚴 Cardio
@@ -102,14 +106,14 @@ export function CheckInPage() {
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder="Anything worth noting..."
-            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-gold/30"
           />
         </div>
 
         <button
           onClick={handleSave}
           className={`w-full py-3.5 rounded-xl font-semibold text-base active:scale-[0.98] transition-all ${
-            saved ? 'bg-success' : 'bg-primary'
+            saved ? 'bg-success' : 'bg-gold text-surface-dark'
           }`}
         >
           {saved ? '✓ Saved!' : todayEntry ? 'Update Check-In' : 'Save Check-In'}

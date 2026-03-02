@@ -4,7 +4,7 @@ import type { Alert } from '../../types';
 const styles = {
   critical: { bg: 'bg-danger/10 border-danger/30', icon: AlertTriangle, color: 'text-danger' },
   warning: { bg: 'bg-warning/10 border-warning/30', icon: AlertCircle, color: 'text-warning' },
-  info: { bg: 'bg-primary/10 border-primary/30', icon: Info, color: 'text-primary' },
+  info: { bg: 'bg-gold/10 border-gold/30', icon: Info, color: 'text-gold' },
 };
 
 export function AlertBanner({ alert }: { alert: Alert }) {

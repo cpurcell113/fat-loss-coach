@@ -55,11 +55,11 @@ export function NutritionPage() {
       <PageHeader title="Nutrition" />
       <div className="px-4 py-4 space-y-5">
         {/* Macro progress bars */}
-        <div className="space-y-3 bg-surface rounded-xl p-4 ring-1 ring-white/10">
-          <MacroBar label="Protein" value={p} min={MACRO_TARGETS.protein.min} max={MACRO_TARGETS.protein.max} color="bg-blue-500" />
-          <MacroBar label="Carbs" value={c} min={MACRO_TARGETS.carbs.min} max={MACRO_TARGETS.carbs.max} color="bg-amber-500" />
-          <MacroBar label="Fats" value={f} min={MACRO_TARGETS.fats.min} max={MACRO_TARGETS.fats.max} color="bg-pink-500" />
-          <div className="flex justify-between text-sm pt-1 border-t border-white/10">
+        <div className="space-y-3 bg-surface rounded-xl p-4 border border-gold/15">
+          <MacroBar label="Protein" value={p} min={MACRO_TARGETS.protein.min} max={MACRO_TARGETS.protein.max} color="bg-gold" />
+          <MacroBar label="Carbs" value={c} min={MACRO_TARGETS.carbs.min} max={MACRO_TARGETS.carbs.max} color="bg-gold-dim" />
+          <MacroBar label="Fats" value={f} min={MACRO_TARGETS.fats.min} max={MACRO_TARGETS.fats.max} color="bg-gold/70" />
+          <div className="flex justify-between text-sm pt-1 border-t border-gold/10">
             <span className="text-muted">Calories</span>
             <span className="font-semibold tabular-nums">{calories} cal</span>
           </div>
@@ -106,14 +106,14 @@ export function NutritionPage() {
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder="What did you eat..."
-            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 mt-1 text-sm outline-none focus:ring-2 focus:ring-gold/30"
           />
         </div>
 
         <button
           onClick={handleSave}
           className={`w-full py-3.5 rounded-xl font-semibold text-base active:scale-[0.98] transition-all ${
-            saved ? 'bg-success' : 'bg-primary'
+            saved ? 'bg-success' : 'bg-gold text-surface-dark'
           }`}
         >
           {saved ? '✓ Saved!' : todayEntry ? 'Update Macros' : 'Save Macros'}
