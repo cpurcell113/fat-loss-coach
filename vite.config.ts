@@ -13,7 +13,7 @@ export default defineConfig({
       devOptions: { enabled: true },
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'All In',
+        name: 'All In — Coach',
         short_name: 'All In',
         description: "My family won't need to heal from the work I didn't do.",
         theme_color: '#0d0d0d',

@@ -182,7 +182,7 @@ export function CoachPage() {
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-2.5 backdrop-blur-sm"

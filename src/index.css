@@ -24,8 +24,11 @@
 }
 
 html, body, #root {
-  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   margin: 0;
+  overscroll-behavior: none;
   background-color: #0d0d0d;
   color: #f0ece4;
   font-family: var(--font-family-body);

@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+export const maxDuration = 30; // seconds — raise above default 10s for slower responses
+
 // Vercel serverless function — API key stays server-side, never in the browser bundle
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
