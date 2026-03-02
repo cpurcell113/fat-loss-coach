@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Anthropic from '@anthropic-ai/sdk';
 import { useNutrition } from '../hooks/useNutrition';
 import { PageHeader } from '../components/layout/PageHeader';
 import { MACRO_TARGETS, CALORIE_RANGE } from '../constants/macros';
@@ -6,6 +7,9 @@ import { PROTEIN_TARGET } from '../constants/baseline';
 import { autoCalories } from '../utils/calculations';
 import type { NutritionEntry } from '../types';
 import { today } from '../utils/date-helpers';
+import { getSettings } from '../data/storage';
+import type { AppSettings } from '../types';
+import { Camera, FileImage, Plus, X } from 'lucide-react';
 
 // ─── Fasting Timer ─────────────────────────────────────────────────────────────
 function useFastingTimer() {
@@ -77,6 +81,18 @@ const QUICK_FOODS = [
   { label: 'Sourdough (1 slice)', emoji: '🍞', protein: 4, carbs: 15, fats: 1, cal: 79 },
 ] as const;
 
+// ─── Image → base64 helper ──────────────────────────────────────────────────
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+type ScanResult = { name: string; protein: number; carbs: number; fats: number; calories: number; serving: string } | null;
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export function FuelPage() {
   const { todayEntry, add, update } = useNutrition();
@@ -86,6 +102,67 @@ export function FuelPage() {
   const [carbs, setCarbs] = useState(todayEntry?.carbs ?? 0);
   const [fats, setFats] = useState(todayEntry?.fats ?? 0);
   const [saved, setSaved] = useState(false);
+
+  // Scan state
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult>(null);
+  const [scanError, setScanError] = useState('');
+  const foodInputRef = useRef<HTMLInputElement>(null);
+  const cronoInputRef = useRef<HTMLInputElement>(null);
+
+  const runVision = async (file: File, mode: 'food' | 'cronometer') => {
+    const settings = getSettings<AppSettings>('settings');
+    if (!settings?.apiKey) { setScanError('No API key — add it in Settings.'); return; }
+
+    setScanning(true);
+    setScanResult(null);
+    setScanError('');
+
+    try {
+      const base64 = await fileToBase64(file);
+      const mediaType = (file.type || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+      const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
+
+      const prompt = mode === 'cronometer'
+        ? 'This is a Cronometer nutrition screenshot. Extract the daily totals. Return ONLY valid JSON: {"name":"Cronometer import","protein":number,"carbs":number,"fats":number,"calories":number,"serving":"daily total"}'
+        : 'Identify the food in this photo and estimate macros for the visible portion. Return ONLY valid JSON: {"name":"food name","protein":number,"carbs":number,"fats":number,"calories":number,"serving":"portion description"}';
+
+      const res = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 256,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: prompt },
+        ]}],
+      });
+
+      const text = res.content[0].type === 'text' ? res.content[0].text : '';
+      const json = text.match(/\{[\s\S]*\}/)?.[0];
+      if (!json) throw new Error('Could not parse response');
+      setScanResult(JSON.parse(json));
+    } catch (e) {
+      setScanError(e instanceof Error ? e.message : 'Scan failed');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const applyScan = () => {
+    if (!scanResult) return;
+    const newP = protein + scanResult.protein;
+    const newC = carbs + scanResult.carbs;
+    const newF = fats + scanResult.fats;
+    setProtein(newP); setCarbs(newC); setFats(newF);
+    const entry: NutritionEntry = {
+      id: todayEntry?.id || crypto.randomUUID(),
+      date: today(), protein: newP, carbs: newC, fats: newF,
+      calories: autoCalories(newP, newC, newF),
+      fiber: todayEntry?.fiber ?? null, water: todayEntry?.water ?? null,
+      notes: todayEntry?.notes ?? '', createdAt: todayEntry?.createdAt || new Date().toISOString(),
+    };
+    if (todayEntry) update(todayEntry.id, entry); else add(entry);
+    setScanResult(null);
+  };
 
   useEffect(() => {
     if (todayEntry) {
@@ -199,6 +276,87 @@ export function FuelPage() {
             <span>{PROTEIN_TARGET}g target</span>
           </div>
         </div>
+
+        {/* Scan buttons */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => foodInputRef.current?.click()}
+            disabled={scanning}
+            className="rounded-xl p-3 flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+            style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.25)' }}
+          >
+            <Camera size={16} style={{ color: '#c9963a' }} />
+            <div className="text-left">
+              <p className="text-xs font-medium" style={{ color: '#f0ece4' }}>Scan Food</p>
+              <p className="text-[10px] text-muted">AI identifies macros</p>
+            </div>
+          </button>
+          <button
+            onClick={() => cronoInputRef.current?.click()}
+            disabled={scanning}
+            className="rounded-xl p-3 flex items-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+            style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.25)' }}
+          >
+            <FileImage size={16} style={{ color: '#c9963a' }} />
+            <div className="text-left">
+              <p className="text-xs font-medium" style={{ color: '#f0ece4' }}>Cronometer</p>
+              <p className="text-[10px] text-muted">Import screenshot</p>
+            </div>
+          </button>
+          {/* Hidden file inputs */}
+          <input ref={foodInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) runVision(f, 'food'); e.target.value = ''; }} />
+          <input ref={cronoInputRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) runVision(f, 'cronometer'); e.target.value = ''; }} />
+        </div>
+
+        {/* Scan loading */}
+        {scanning && (
+          <div className="rounded-xl p-4 text-center" style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.2)' }}>
+            <p className="text-sm text-muted">Analyzing image...</p>
+          </div>
+        )}
+
+        {/* Scan error */}
+        {scanError && (
+          <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'rgba(139,58,58,0.15)', border: '1px solid #8b3a3a' }}>
+            <p className="text-xs" style={{ color: '#8b3a3a' }}>{scanError}</p>
+            <button onClick={() => setScanError('')}><X size={14} style={{ color: '#8b3a3a' }} /></button>
+          </div>
+        )}
+
+        {/* Scan result card */}
+        {scanResult && (
+          <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid rgba(74,124,89,0.4)' }}>
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-medium text-sm" style={{ color: '#f0ece4' }}>{scanResult.name}</p>
+                <p className="text-[10px] text-muted">{scanResult.serving}</p>
+              </div>
+              <button onClick={() => setScanResult(null)}><X size={14} className="text-muted" /></button>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-center mb-3">
+              {[
+                { label: 'Protein', value: `${scanResult.protein}g` },
+                { label: 'Carbs', value: `${scanResult.carbs}g` },
+                { label: 'Fats', value: `${scanResult.fats}g` },
+                { label: 'Cals', value: `${scanResult.calories}` },
+              ].map(s => (
+                <div key={s.label} className="rounded-lg py-2" style={{ background: '#2a2a2a' }}>
+                  <p className="font-number text-sm font-bold" style={{ color: '#c9963a' }}>{s.value}</p>
+                  <p className="text-[9px] text-muted">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={applyScan}
+              className="w-full py-2.5 rounded-xl font-display font-bold text-sm tracking-wide text-black flex items-center justify-center gap-2"
+              style={{ background: '#4a7c59', color: '#fff' }}
+            >
+              <Plus size={14} /> ADD TO TODAY
+            </button>
+          </div>
+        )}
 
         {/* Quick-add foods */}
         <div>
