@@ -25,8 +25,10 @@ export function CoachPage() {
   const { sessions: sprints, add: addSprint } = usePerformance();
   const alerts = useAlerts(bodyComp, checkIns, nutrition);
 
+  const effectiveApiKey = settings?.apiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+
   const { messages, isStreaming, pendingAction, sendMessage, resolveAction } = useCoach(
-    settings?.apiKey || '',
+    effectiveApiKey,
     bodyComp,
     nutrition,
     checkIns,
@@ -181,7 +183,7 @@ export function CoachPage() {
     );
   }
 
-  if (!settings?.apiKey) {
+  if (!effectiveApiKey) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 text-center">
         <p className="font-display text-xl font-bold mb-2" style={{ color: '#c9963a' }}>API Key Needed</p>

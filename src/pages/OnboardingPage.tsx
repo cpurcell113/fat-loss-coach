@@ -11,7 +11,7 @@ export function OnboardingPage() {
   const existing = getSettings<AppSettings>('settings');
 
   const [step, setStep] = useState(0);
-  const [apiKey, setApiKey] = useState(existing?.apiKey || '');
+  const [apiKey, setApiKey] = useState(existing?.apiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || '');
   const [micGranted, setMicGranted] = useState(false);
   const [keyError, setKeyError] = useState('');
   const [keyValidating, setKeyValidating] = useState(false);
