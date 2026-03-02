@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import Anthropic from '@anthropic-ai/sdk';
 import type { ChatMessage, BodyCompEntry, NutritionEntry, DailyCheckIn, SprintSession, Alert } from '../types';
 import { COACH_SYSTEM_PROMPT } from '../constants/coach-prompt';
 import { buildCoachContext } from '../utils/context-builder';
@@ -23,7 +22,7 @@ export type PendingAction = {
   apiContext: Array<{ role: 'user' | 'assistant'; content: string | unknown[] }>;
 };
 
-const COACH_TOOLS: Anthropic.Tool[] = [
+const COACH_TOOLS = [
   {
     name: 'log_nutrition',
     description: "Log or update today's nutrition macros in the app. Use when user tells you their macros or asks you to log food intake.",
@@ -86,6 +85,19 @@ const COACH_TOOLS: Anthropic.Tool[] = [
   },
 ];
 
+async function callApi(body: object): Promise<any> {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Server error ${res.status}`);
+  }
+  return res.json();
+}
+
 function formatActionDisplay(tool: string, input: Record<string, unknown>): string {
   if (tool === 'log_nutrition') {
     const p = input.protein as number;
@@ -119,7 +131,6 @@ function formatActionDisplay(tool: string, input: Record<string, unknown>): stri
 }
 
 export function useCoach(
-  apiKey: string,
   bodyComp: BodyCompEntry[],
   nutrition: NutritionEntry[],
   checkIns: DailyCheckIn[],
@@ -133,7 +144,7 @@ export function useCoach(
   contextRef.current = { bodyComp, nutrition, checkIns, sprints, alerts };
 
   const sendMessage = useCallback(async (userText: string) => {
-    if (!apiKey || !userText.trim()) return;
+    if (!userText.trim()) return;
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
@@ -159,14 +170,12 @@ export function useCoach(
       const context = buildCoachContext(bodyComp, nutrition, checkIns, sprints, alerts);
       const systemPrompt = `${COACH_SYSTEM_PROMPT}\n\n---\n${context}`;
 
-      const apiMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      const apiMessages = [
         ...loadHistory().slice(-18),
         userMsg,
       ].map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-      const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
-      const res = await client.messages.create({
+      const res = await callApi({
         model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         system: systemPrompt,
@@ -175,10 +184,8 @@ export function useCoach(
       });
 
       if (res.stop_reason === 'tool_use') {
-        const textBlock = res.content.find(b => b.type === 'text') as { text: string } | undefined;
-        const toolBlock = res.content.find(b => b.type === 'tool_use') as {
-          id: string; name: string; input: Record<string, unknown>
-        } | undefined;
+        const textBlock = res.content.find((b: any) => b.type === 'text');
+        const toolBlock = res.content.find((b: any) => b.type === 'tool_use');
 
         const replyText = textBlock?.text || "I'll update that for you — confirm below.";
         setMessages(prev => {
@@ -195,12 +202,12 @@ export function useCoach(
             displayText: formatActionDisplay(toolBlock.name, toolBlock.input),
             apiContext: [
               ...apiMessages,
-              { role: 'assistant' as const, content: res.content as unknown[] },
+              { role: 'assistant' as const, content: res.content },
             ],
           });
         }
       } else {
-        const textBlock = res.content.find(b => b.type === 'text') as { text: string } | undefined;
+        const textBlock = res.content.find((b: any) => b.type === 'text');
         const fullText = textBlock?.text ?? '';
         setMessages(prev => {
           const updated = prev.map(m => m.id === assistantId ? { ...m, content: fullText } : m);
@@ -213,7 +220,7 @@ export function useCoach(
       setMessages(prev => {
         const updated = prev.map(m =>
           m.id === assistantId
-            ? { ...m, content: `Error: ${errorMsg}. Check your API key in Settings.` }
+            ? { ...m, content: `Error: ${errorMsg}` }
             : m
         );
         saveHistory(updated);
@@ -222,7 +229,7 @@ export function useCoach(
     } finally {
       setIsLoading(false);
     }
-  }, [apiKey]);
+  }, []);
 
   const resolveAction = useCallback(async (success: boolean, resultMessage: string) => {
     if (!pendingAction) return;
@@ -252,17 +259,15 @@ export function useCoach(
         },
       ];
 
-      const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await client.messages.create({
+      const res = await callApi({
         model: 'claude-sonnet-4-6',
         max_tokens: 512,
         system: systemPrompt,
-        messages: continuationMessages as Parameters<typeof client.messages.create>[0]['messages'],
+        messages: continuationMessages,
         tools: COACH_TOOLS,
       });
 
-      const textBlock = res.content.find(b => b.type === 'text') as { text: string } | undefined;
+      const textBlock = res.content.find((b: any) => b.type === 'text');
       const fullText = textBlock?.text ?? (success ? 'Done.' : 'No problem, nothing was changed.');
 
       setMessages(prev => {
@@ -275,13 +280,12 @@ export function useCoach(
     } finally {
       setIsLoading(false);
     }
-  }, [apiKey, pendingAction]);
+  }, [pendingAction]);
 
   const clearHistory = useCallback(() => {
     setMessages([]);
     saveHistory([]);
   }, []);
 
-  // isStreaming alias kept for CoachPage compatibility
   return { messages, isStreaming: isLoading, pendingAction, sendMessage, resolveAction, clearHistory };
 }

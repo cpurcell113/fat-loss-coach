@@ -25,10 +25,7 @@ export function CoachPage() {
   const { sessions: sprints, add: addSprint } = usePerformance();
   const alerts = useAlerts(bodyComp, checkIns, nutrition);
 
-  const effectiveApiKey = settings?.apiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || '';
-
   const { messages, isStreaming, pendingAction, sendMessage, resolveAction } = useCoach(
-    effectiveApiKey,
     bodyComp,
     nutrition,
     checkIns,
@@ -183,21 +180,6 @@ export function CoachPage() {
     );
   }
 
-  if (!effectiveApiKey) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full px-6 text-center">
-        <p className="font-display text-xl font-bold mb-2" style={{ color: '#c9963a' }}>API Key Needed</p>
-        <p className="text-sm text-muted mb-6">Add your Anthropic API key in Settings to activate your coach.</p>
-        <button
-          onClick={() => navigate('/settings')}
-          className="px-6 py-3 rounded-xl font-display font-bold text-black"
-          style={{ background: '#c9963a' }}
-        >
-          OPEN SETTINGS
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
