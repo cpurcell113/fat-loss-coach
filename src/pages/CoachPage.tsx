@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useBodyComp } from '../hooks/useBodyComp';
 import { useNutrition } from '../hooks/useNutrition';
 import { useCheckIn } from '../hooks/useCheckIn';
@@ -6,23 +6,26 @@ import { usePerformance } from '../hooks/usePerformance';
 import { useAlerts } from '../hooks/useAlerts';
 import { useCoach } from '../hooks/useCoach';
 import { useVoice } from '../hooks/useVoice';
-import { getSettings } from '../data/storage';
-import type { AppSettings } from '../types';
+import { getSettings, setSettings } from '../data/storage';
+import type { AppSettings, NutritionEntry, DailyCheckIn, SprintSession } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Mic, MicOff, Volume2, VolumeX, Send } from 'lucide-react';
+import { Settings, Mic, MicOff, Volume2, VolumeX, Send, Check, X } from 'lucide-react';
 import { ChatWindow } from '../components/chat/ChatWindow';
 import { QuickActions } from '../components/chat/QuickActions';
+import { today } from '../utils/date-helpers';
+import { autoCalories } from '../utils/calculations';
 
 export function CoachPage() {
   const settings = getSettings<AppSettings>('settings');
   const navigate = useNavigate();
 
   const { entries: bodyComp } = useBodyComp();
-  const { entries: nutrition } = useNutrition();
-  const { entries: checkIns } = useCheckIn();
-  const { sessions: sprints } = usePerformance();
+  const { entries: nutrition, todayEntry: todayNutrition, add: addNutrition, update: updateNutrition } = useNutrition();
+  const { entries: checkIns, todayEntry: todayCheckIn, add: addCheckIn, update: updateCheckIn } = useCheckIn();
+  const { sessions: sprints, add: addSprint } = usePerformance();
   const alerts = useAlerts(bodyComp, checkIns, nutrition);
-  const { messages, isStreaming, sendMessage } = useCoach(
+
+  const { messages, isStreaming, pendingAction, sendMessage, resolveAction } = useCoach(
     settings?.apiKey || '',
     bodyComp,
     nutrition,
@@ -36,8 +39,8 @@ export function CoachPage() {
     startListening, stopListening, clearTranscript, speak, stopSpeaking, toggleVoice,
   } = useVoice();
 
-  const [textInput, setTextInput] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textState = useRef('');
 
   // Auto-speak Claude responses when voice is enabled
   const lastMsgRef = useRef('');
@@ -51,11 +54,11 @@ export function CoachPage() {
   }, [messages, isStreaming, voiceEnabled, speak]);
 
   const handleSendText = () => {
-    const text = textInput.trim();
+    const text = textState.current.trim();
     if (!text || isStreaming) return;
     sendMessage(text);
-    setTextInput('');
-    inputRef.current?.focus();
+    textState.current = '';
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   const handleMicRelease = () => {
@@ -65,6 +68,89 @@ export function CoachPage() {
       clearTranscript();
     }
   };
+
+  // ─── Confirm / Cancel pending action ──────────────────────────────────────
+  const handleConfirm = async () => {
+    if (!pendingAction) return;
+    const { tool, input } = pendingAction;
+    try {
+      if (tool === 'log_nutrition') {
+        const p = input.protein as number;
+        const c = input.carbs as number;
+        const f = input.fats as number;
+        const entry: NutritionEntry = {
+          id: todayNutrition?.id || crypto.randomUUID(),
+          date: today(), protein: p, carbs: c, fats: f,
+          calories: autoCalories(p, c, f),
+          fiber: todayNutrition?.fiber ?? null,
+          water: todayNutrition?.water ?? null,
+          notes: todayNutrition?.notes ?? '',
+          createdAt: todayNutrition?.createdAt || new Date().toISOString(),
+        };
+        if (todayNutrition) updateNutrition(todayNutrition.id, entry); else addNutrition(entry);
+        await resolveAction(true, 'Nutrition logged successfully.');
+
+      } else if (tool === 'log_checkin') {
+        const inp = input as Partial<DailyCheckIn>;
+        const entry: DailyCheckIn = {
+          id: todayCheckIn?.id || crypto.randomUUID(),
+          date: today(),
+          mood: inp.mood ?? todayCheckIn?.mood ?? 5,
+          energyLevel: inp.energyLevel ?? todayCheckIn?.energyLevel ?? 5,
+          sleepHours: inp.sleepHours ?? todayCheckIn?.sleepHours ?? 7,
+          sleepQuality: inp.sleepQuality ?? todayCheckIn?.sleepQuality ?? 3,
+          soreness: inp.soreness ?? todayCheckIn?.soreness ?? 3,
+          hunger: inp.hunger ?? todayCheckIn?.hunger ?? 5,
+          stressLevel: inp.stressLevel ?? todayCheckIn?.stressLevel ?? 3,
+          stressSource: todayCheckIn?.stressSource ?? null,
+          fastingStatus: todayCheckIn?.fastingStatus ?? 'fasting',
+          oneWord: todayCheckIn?.oneWord ?? '',
+          didCardio: todayCheckIn?.didCardio ?? false,
+          didResistance: todayCheckIn?.didResistance ?? false,
+          claudeDirective: todayCheckIn?.claudeDirective ?? null,
+          notes: (inp.notes as string) ?? todayCheckIn?.notes ?? '',
+          digestion: todayCheckIn?.digestion ?? 5,
+          createdAt: todayCheckIn?.createdAt || new Date().toISOString(),
+        };
+        if (todayCheckIn) updateCheckIn(todayCheckIn.id, entry); else addCheckIn(entry);
+        await resolveAction(true, 'Check-in logged successfully.');
+
+      } else if (tool === 'log_sprint') {
+        const session: SprintSession = {
+          id: crypto.randomUUID(),
+          date: today(),
+          type: 'treadmill',
+          rounds: input.rounds as number,
+          distance: (input.distance as number | undefined) ?? null,
+          rpe: input.rpe as number,
+          workSeconds: 15,
+          restSeconds: 45,
+          avgCalPerRound: null,
+          peakCalPerRound: null,
+          totalCalories: null,
+          avgHeartRate: null,
+          peakHeartRate: null,
+          notes: '',
+          createdAt: new Date().toISOString(),
+        };
+        addSprint(session);
+        await resolveAction(true, 'Sprint session logged.');
+
+      } else if (tool === 'update_goal') {
+        const currentSettings = getSettings<AppSettings>('settings');
+        if (currentSettings) {
+          setSettings('settings', { ...currentSettings, [input.field as string]: input.value });
+        }
+        await resolveAction(true, 'Goal updated.');
+      } else {
+        await resolveAction(true, 'Done.');
+      }
+    } catch {
+      await resolveAction(false, 'Failed to save — please try again.');
+    }
+  };
+
+  const handleCancel = () => resolveAction(false, 'User cancelled.');
 
   if (!settings?.onboardingComplete) {
     return (
@@ -115,7 +201,6 @@ export function CoachPage() {
             onClick={isSpeaking ? stopSpeaking : toggleVoice}
             className="p-2 rounded-lg transition-colors"
             style={{ color: voiceEnabled ? '#c9963a' : '#4a4845' }}
-            title={voiceEnabled ? 'Voice on' : 'Voice off'}
           >
             {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
@@ -126,10 +211,44 @@ export function CoachPage() {
       </div>
 
       {/* Messages */}
-      <ChatWindow messages={messages} />
+      <ChatWindow
+        messages={messages}
+        onSpeak={(content) => { window.speechSynthesis?.cancel(); speak(content); }}
+      />
 
       {/* Quick actions */}
       <QuickActions onSelect={sendMessage} disabled={isStreaming} />
+
+      {/* Pending action confirmation card */}
+      {pendingAction && (
+        <div
+          className="mx-3 mb-2 rounded-xl p-4"
+          style={{ background: '#1a1a1a', border: '2px solid rgba(201,150,58,0.5)' }}
+        >
+          <p className="font-display font-bold text-[10px] tracking-widest mb-2" style={{ color: '#c9963a' }}>
+            PROPOSED UPDATE
+          </p>
+          <p className="text-sm leading-snug mb-4 whitespace-pre-line" style={{ color: '#f0ece4' }}>
+            {pendingAction.displayText}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={handleCancel}
+              className="flex-1 py-2.5 rounded-xl font-display font-bold text-sm tracking-wide text-muted flex items-center justify-center gap-1.5"
+              style={{ background: '#2a2a2a' }}
+            >
+              <X size={14} /> CANCEL
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="flex-1 py-2.5 rounded-xl font-display font-bold text-sm tracking-wide flex items-center justify-center gap-1.5"
+              style={{ background: '#4a7c59', color: '#fff' }}
+            >
+              <Check size={14} /> CONFIRM
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Input bar */}
       <div
@@ -145,19 +264,15 @@ export function CoachPage() {
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
-            value={textInput}
-            onChange={e => setTextInput(e.target.value)}
+            defaultValue=""
+            onChange={e => { textState.current = e.target.value; }}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(); }
             }}
             placeholder="Message your coach..."
             rows={1}
             className="flex-1 resize-none rounded-xl px-4 py-2.5 text-sm outline-none max-h-32"
-            style={{
-              background: '#222',
-              color: '#f0ece4',
-              minHeight: '40px',
-            }}
+            style={{ background: '#222', color: '#f0ece4', minHeight: '40px' }}
           />
 
           {isSupported && (
@@ -170,7 +285,6 @@ export function CoachPage() {
                 background: isListening ? '#c9963a' : '#2a2a2a',
                 color: isListening ? '#000' : '#4a4845',
               }}
-              title="Hold to speak"
             >
               {isListening ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
@@ -178,7 +292,7 @@ export function CoachPage() {
 
           <button
             onClick={handleSendText}
-            disabled={!textInput.trim() || isStreaming}
+            disabled={isStreaming}
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 disabled:opacity-40 active:scale-95 transition-transform"
             style={{ background: '#c9963a', color: '#000' }}
           >

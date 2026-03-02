@@ -1,6 +1,13 @@
+import { Volume2 } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../../types';
 
-export function ChatMessage({ message }: { message: ChatMessageType }) {
+export function ChatMessage({
+  message,
+  onSpeak,
+}: {
+  message: ChatMessageType;
+  onSpeak?: () => void;
+}) {
   const isUser = message.role === 'user';
 
   return (
@@ -18,6 +25,17 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
             <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
             <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </span>
+        )}
+        {!isUser && message.content && onSpeak && (
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={onSpeak}
+              className="p-1 rounded-md opacity-40 hover:opacity-80 active:opacity-100 transition-opacity"
+              title="Play message"
+            >
+              <Volume2 size={13} style={{ color: '#c9963a' }} />
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -7,9 +7,12 @@ interface VoiceState {
   voiceEnabled: boolean;
   isSupported: boolean;
   error: string | null;
+  availableVoices: SpeechSynthesisVoice[];
+  voicePref: string;
 }
 
 const VOICE_PREF_KEY = 'allin_voice_enabled';
+const VOICE_NAME_KEY = 'allin_voice_name';
 
 // Use type assertions to avoid missing lib dom types for speech API
 type SpeechRecognitionType = {
@@ -30,6 +33,20 @@ function getSpeechRecognition(): (new () => SpeechRecognitionType) | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
+function pickVoice(voices: SpeechSynthesisVoice[], savedName: string): SpeechSynthesisVoice | undefined {
+  if (savedName) {
+    const saved = voices.find(v => v.name === savedName);
+    if (saved) return saved;
+  }
+  return (
+    voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha') && v.localService) ||
+    voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha')) ||
+    voices.find(v => v.lang === 'en-US' && v.localService) ||
+    voices.find(v => v.lang === 'en-US') ||
+    voices.find(v => v.lang.startsWith('en-'))
+  );
+}
+
 export function useVoice() {
   const [state, setState] = useState<VoiceState>(() => ({
     isListening: false,
@@ -41,14 +58,22 @@ export function useVoice() {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     ),
     error: null,
+    availableVoices: [],
+    voicePref: localStorage.getItem(VOICE_NAME_KEY) || '',
   }));
 
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
 
+  // Load available voices (async on iOS)
   useEffect(() => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-    }
+    if (!('speechSynthesis' in window)) return;
+    const load = () => {
+      const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+      if (voices.length > 0) setState(s => ({ ...s, availableVoices: voices }));
+    };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
   }, []);
 
   const startListening = useCallback(() => {
@@ -107,15 +132,8 @@ export function useVoice() {
     const doSpeak = () => {
       const utterance = new SpeechSynthesisUtterance(clean);
       const voices = window.speechSynthesis.getVoices();
-
-      // Prefer high-quality on-device en-US female voices (best on iOS = Samantha enhanced)
-      const preferred =
-        voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha') && v.localService) ||
-        voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha')) ||
-        voices.find(v => v.lang === 'en-US' && v.localService) ||
-        voices.find(v => v.lang === 'en-US') ||
-        voices.find(v => v.lang.startsWith('en-'));
-
+      const savedName = localStorage.getItem(VOICE_NAME_KEY) || '';
+      const preferred = pickVoice(voices, savedName);
       if (preferred) utterance.voice = preferred;
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
@@ -127,7 +145,6 @@ export function useVoice() {
       window.speechSynthesis.speak(utterance);
     };
 
-    // iOS loads voices async — wait if not ready yet
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
       doSpeak();
@@ -137,6 +154,20 @@ export function useVoice() {
         doSpeak();
       };
     }
+  }, []);
+
+  const setVoicePref = useCallback((name: string) => {
+    localStorage.setItem(VOICE_NAME_KEY, name);
+    setState(s => ({ ...s, voicePref: name }));
+    // Speak a preview
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance("All in. Let's get to work.");
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = pickVoice(voices, name);
+    if (preferred) utterance.voice = preferred;
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
   }, []);
 
   const stopSpeaking = useCallback(() => {
@@ -159,6 +190,7 @@ export function useVoice() {
     stopListening,
     clearTranscript,
     speak,
+    setVoicePref,
     stopSpeaking,
     toggleVoice,
   };

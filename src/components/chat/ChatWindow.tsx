@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react';
 import type { ChatMessage as ChatMessageType } from '../../types';
 import { ChatMessage } from './ChatMessage';
 
-export function ChatWindow({ messages }: { messages: ChatMessageType[] }) {
+export function ChatWindow({
+  messages,
+  onSpeak,
+}: {
+  messages: ChatMessageType[];
+  onSpeak?: (content: string) => void;
+}) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,7 +27,11 @@ export function ChatWindow({ messages }: { messages: ChatMessageType[] }) {
         </div>
       )}
       {messages.map(msg => (
-        <ChatMessage key={msg.id} message={msg} />
+        <ChatMessage
+          key={msg.id}
+          message={msg}
+          onSpeak={onSpeak && msg.role === 'assistant' ? () => onSpeak(msg.content) : undefined}
+        />
       ))}
       <div ref={bottomRef} />
     </div>
