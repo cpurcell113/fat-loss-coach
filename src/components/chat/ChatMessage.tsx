@@ -1,12 +1,14 @@
-import { Volume2 } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../../types';
 
 export function ChatMessage({
   message,
   onSpeak,
+  isActiveSpeaker,
 }: {
   message: ChatMessageType;
   onSpeak?: () => void;
+  isActiveSpeaker?: boolean;
 }) {
   const isUser = message.role === 'user';
 
@@ -30,10 +32,13 @@ export function ChatMessage({
           <div className="mt-2 flex justify-end">
             <button
               onClick={onSpeak}
-              className="p-1 rounded-md opacity-40 hover:opacity-80 active:opacity-100 transition-opacity"
-              title="Play message"
+              className="p-1 rounded-md transition-opacity"
+              style={{ opacity: isActiveSpeaker ? 1 : 0.4 }}
+              title={isActiveSpeaker ? 'Stop' : 'Play message'}
             >
-              <Volume2 size={13} style={{ color: '#c9963a' }} />
+              {isActiveSpeaker
+                ? <VolumeX size={13} style={{ color: '#c9963a' }} />
+                : <Volume2 size={13} style={{ color: '#c9963a' }} />}
             </button>
           </div>
         )}

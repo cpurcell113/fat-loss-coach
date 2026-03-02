@@ -4,7 +4,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { getSettings, setSettings } from '../data/storage';
 import type { AppSettings } from '../types';
-import { Download, Upload, Trash2, Check } from 'lucide-react';
+import { Download, Upload, Trash2, Check, Eye, EyeOff, Copy } from 'lucide-react';
 
 const VOICE_NAME_KEY = 'allin_voice_name';
 
@@ -13,6 +13,8 @@ export function SettingsPage() {
   const settings = getSettings<AppSettings>('settings');
   const [apiKey, setApiKey] = useState(settings?.apiKey || '');
   const [saved, setSaved] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem(VOICE_NAME_KEY) || '');
 
@@ -30,7 +32,6 @@ export function SettingsPage() {
   const handleSelectVoice = (name: string) => {
     localStorage.setItem(VOICE_NAME_KEY, name);
     setSelectedVoice(name);
-    // Preview
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance("All in. Let's get to work.");
     const voice = voices.find(v => v.name === name);
@@ -45,6 +46,12 @@ export function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(apiKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleExport = () => {
@@ -100,6 +107,12 @@ export function SettingsPage() {
     }
   };
 
+  const sortedVoices = [...voices].sort((a, b) => {
+    const quality = (v: SpeechSynthesisVoice) =>
+      v.name.includes('Enhanced') || v.name.includes('Premium') ? 0 : v.localService ? 1 : 2;
+    return quality(a) - quality(b);
+  });
+
   return (
     <div>
       <PageHeader
@@ -115,43 +128,73 @@ export function SettingsPage() {
         <Card>
           <h3 className="text-sm font-medium mb-2">Anthropic API Key</h3>
           <p className="text-xs text-muted mb-3">Powers your AI coach. Stored locally on this device only.</p>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            placeholder="sk-ant-..."
-            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10 mb-2"
-          />
-          <button
-            onClick={handleSaveKey}
-            className={`w-full py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success' : 'bg-gold text-surface-dark'}`}
-          >
-            {saved ? '✓ Saved' : 'Save API Key'}
-          </button>
+          <div className="flex items-center gap-2 mb-2">
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              placeholder="sk-ant-..."
+              className="flex-1 bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10"
+            />
+            <button
+              onClick={() => setShowKey(s => !s)}
+              className="p-2.5 rounded-lg bg-surface-alt border border-gold/10 text-muted"
+              title={showKey ? 'Hide key' : 'Show key'}
+            >
+              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopy}
+              className="flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 bg-surface-alt border border-gold/10 text-muted"
+            >
+              {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Key</>}
+            </button>
+            <button
+              onClick={handleSaveKey}
+              className={`flex-1 py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
+            >
+              {saved ? '✓ Saved' : 'Save Key'}
+            </button>
+          </div>
         </Card>
 
         {/* Voice */}
-        {'speechSynthesis' in window && voices.length > 0 && (
+        {'speechSynthesis' in window && sortedVoices.length > 0 && (
           <Card>
             <h3 className="text-sm font-medium mb-1">Voice</h3>
             <p className="text-xs text-muted mb-3">Tap a voice to select and preview it.</p>
             <div className="space-y-1 max-h-48 overflow-y-auto">
-              {voices.map(v => (
-                <button
-                  key={v.name}
-                  onClick={() => handleSelectVoice(v.name)}
-                  className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-left text-sm transition-colors"
-                  style={{
-                    background: selectedVoice === v.name ? 'rgba(201,150,58,0.15)' : '#1a1a1a',
-                    border: `1px solid ${selectedVoice === v.name ? 'rgba(201,150,58,0.4)' : '#2a2a2a'}`,
-                    color: selectedVoice === v.name ? '#c9963a' : '#f0ece4',
-                  }}
-                >
-                  <span>{v.name}</span>
-                  {selectedVoice === v.name && <Check size={14} style={{ color: '#c9963a' }} />}
-                </button>
-              ))}
+              {sortedVoices.map(v => {
+                const isBest = v.name.includes('Enhanced') || v.name.includes('Premium');
+                return (
+                  <button
+                    key={v.name}
+                    onClick={() => handleSelectVoice(v.name)}
+                    className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-left text-sm transition-colors"
+                    style={{
+                      background: selectedVoice === v.name ? 'rgba(201,150,58,0.15)' : '#1a1a1a',
+                      border: `1px solid ${selectedVoice === v.name ? 'rgba(201,150,58,0.4)' : '#2a2a2a'}`,
+                      color: selectedVoice === v.name ? '#c9963a' : '#f0ece4',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{v.name}</span>
+                      {isBest && (
+                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(201,150,58,0.15)', color: '#c9963a', fontWeight: 600 }}>
+                          BEST
+                        </span>
+                      )}
+                    </div>
+                    {selectedVoice === v.name && <Check size={14} style={{ color: '#c9963a' }} />}
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-[10px] text-muted mt-2">
+              For better voices on iPhone: Settings → Accessibility → Spoken Content → Voices → English → download a Premium voice.
+            </p>
           </Card>
         )}
 

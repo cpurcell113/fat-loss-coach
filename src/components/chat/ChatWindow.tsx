@@ -5,9 +5,13 @@ import { ChatMessage } from './ChatMessage';
 export function ChatWindow({
   messages,
   onSpeak,
+  speakingMsgId,
+  isSpeaking,
 }: {
   messages: ChatMessageType[];
-  onSpeak?: (content: string) => void;
+  onSpeak?: (id: string, content: string) => void;
+  speakingMsgId?: string | null;
+  isSpeaking?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -30,7 +34,8 @@ export function ChatWindow({
         <ChatMessage
           key={msg.id}
           message={msg}
-          onSpeak={onSpeak && msg.role === 'assistant' ? () => onSpeak(msg.content) : undefined}
+          onSpeak={onSpeak && msg.role === 'assistant' ? () => onSpeak(msg.id, msg.content) : undefined}
+          isActiveSpeaker={speakingMsgId === msg.id && !!isSpeaking}
         />
       ))}
       <div ref={bottomRef} />

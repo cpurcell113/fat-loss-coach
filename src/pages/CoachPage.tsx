@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBodyComp } from '../hooks/useBodyComp';
 import { useNutrition } from '../hooks/useNutrition';
 import { useCheckIn } from '../hooks/useCheckIn';
@@ -39,6 +39,8 @@ export function CoachPage() {
     startListening, stopListening, clearTranscript, speak, stopSpeaking, toggleVoice,
   } = useVoice();
 
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const textState = useRef('');
 
@@ -66,6 +68,16 @@ export function CoachPage() {
     if (final.trim()) {
       sendMessage(final.trim());
       clearTranscript();
+    }
+  };
+
+  const handleSpeak = (msgId: string, content: string) => {
+    if (speakingMsgId === msgId && isSpeaking) {
+      stopSpeaking();
+      setSpeakingMsgId(null);
+    } else {
+      speak(content);
+      setSpeakingMsgId(msgId);
     }
   };
 
@@ -213,7 +225,9 @@ export function CoachPage() {
       {/* Messages */}
       <ChatWindow
         messages={messages}
-        onSpeak={(content) => { window.speechSynthesis?.cancel(); speak(content); }}
+        onSpeak={handleSpeak}
+        speakingMsgId={speakingMsgId}
+        isSpeaking={isSpeaking}
       />
 
       {/* Quick actions */}

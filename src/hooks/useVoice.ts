@@ -39,8 +39,8 @@ function pickVoice(voices: SpeechSynthesisVoice[], savedName: string): SpeechSyn
     if (saved) return saved;
   }
   return (
+    voices.find(v => v.lang.startsWith('en') && (v.name.includes('Enhanced') || v.name.includes('Premium'))) ||
     voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha') && v.localService) ||
-    voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha')) ||
     voices.find(v => v.lang === 'en-US' && v.localService) ||
     voices.find(v => v.lang === 'en-US') ||
     voices.find(v => v.lang.startsWith('en-'))
