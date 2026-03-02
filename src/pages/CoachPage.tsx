@@ -44,7 +44,7 @@ export function CoachPage() {
   useEffect(() => {
     if (!voiceEnabled || isStreaming) return;
     const last = messages[messages.length - 1];
-    if (last?.role === 'assistant' && last.content && last.content !== lastMsgRef.current) {
+    if (last?.role === 'assistant' && last.content && last.content !== lastMsgRef.current && !last.content.startsWith('Error:')) {
       lastMsgRef.current = last.content;
       speak(last.content);
     }

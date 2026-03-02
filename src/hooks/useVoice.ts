@@ -104,23 +104,39 @@ export function useVoice() {
       .replace(/\n+/g, ' ')
       .trim();
 
-    const utterance = new SpeechSynthesisUtterance(clean);
+    const doSpeak = () => {
+      const utterance = new SpeechSynthesisUtterance(clean);
+      const voices = window.speechSynthesis.getVoices();
 
+      // Prefer high-quality on-device en-US female voices (best on iOS = Samantha enhanced)
+      const preferred =
+        voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha') && v.localService) ||
+        voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha')) ||
+        voices.find(v => v.lang === 'en-US' && v.localService) ||
+        voices.find(v => v.lang === 'en-US') ||
+        voices.find(v => v.lang.startsWith('en-'));
+
+      if (preferred) utterance.voice = preferred;
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      utterance.onstart = () => setState(s => ({ ...s, isSpeaking: true }));
+      utterance.onend = () => setState(s => ({ ...s, isSpeaking: false }));
+      utterance.onerror = () => setState(s => ({ ...s, isSpeaking: false }));
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // iOS loads voices async — wait if not ready yet
     const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      voices.find(v => v.lang === 'en-US' && v.name.toLowerCase().includes('daniel')) ||
-      voices.find(v => v.lang === 'en-US' && !v.name.toLowerCase().includes('female') &&
-        !v.name.toLowerCase().includes('samantha') && !v.name.toLowerCase().includes('karen')) ||
-      voices.find(v => v.lang.startsWith('en-'));
-
-    if (preferred) utterance.voice = preferred;
-    utterance.rate = 1.0;
-
-    utterance.onstart = () => setState(s => ({ ...s, isSpeaking: true }));
-    utterance.onend = () => setState(s => ({ ...s, isSpeaking: false }));
-    utterance.onerror = () => setState(s => ({ ...s, isSpeaking: false }));
-
-    window.speechSynthesis.speak(utterance);
+    if (voices.length > 0) {
+      doSpeak();
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        doSpeak();
+      };
+    }
   }, []);
 
   const stopSpeaking = useCallback(() => {
