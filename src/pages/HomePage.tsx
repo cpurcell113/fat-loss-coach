@@ -19,23 +19,29 @@ import {
 import type { AppSettings, DailyCheckIn } from '../types';
 import { today, formatDisplay } from '../utils/date-helpers';
 import { Settings, ChevronRight, Flame, Zap, Moon } from 'lucide-react';
+import { SheetPortal } from '../components/ui/SheetPortal';
 
-// ─── Check-In Modal (iPhone-safe: scroll body + sticky actions) ───────────────
+// ─── Check-In Modal (ported above nav; sticky Skip / Confirm) ─────────────────
 function CheckInModal({
+  initial,
   onComplete,
   onDismiss,
 }: {
+  initial?: Partial<DailyCheckIn> | null;
   onComplete: (entry: Partial<DailyCheckIn>) => void;
   onDismiss: () => void;
 }) {
-  const [sleepHours, setSleepHours] = useState(7);
-  const [sleepQuality, setSleepQuality] = useState(3);
-  const [energyLevel, setEnergyLevel] = useState(7);
-  const [stressLevel, setStressLevel] = useState(4);
-  const [soreness, setSoreness] = useState(3);
-  const [stressSource, setStressSource] = useState('All clear');
-  const [fastingStatus, setFastingStatus] = useState<'fasting' | 'window-open'>('fasting');
-  const [oneWord, setOneWord] = useState('');
+  const editing = Boolean(initial?.id);
+  const [sleepHours, setSleepHours] = useState(initial?.sleepHours ?? 7);
+  const [sleepQuality, setSleepQuality] = useState(initial?.sleepQuality ?? 3);
+  const [energyLevel, setEnergyLevel] = useState(initial?.energyLevel ?? 7);
+  const [stressLevel, setStressLevel] = useState(initial?.stressLevel ?? 4);
+  const [soreness, setSoreness] = useState(initial?.soreness ?? 3);
+  const [stressSource, setStressSource] = useState(initial?.stressSource ?? 'All clear');
+  const [fastingStatus, setFastingStatus] = useState<'fasting' | 'window-open'>(
+    initial?.fastingStatus ?? 'fasting',
+  );
+  const [oneWord, setOneWord] = useState(initial?.oneWord ?? '');
 
   const liveScore = calculateReadinessScore({
     sleepHours,
@@ -55,226 +61,224 @@ function CheckInModal({
       fastingStatus,
       oneWord,
       soreness,
-      hunger: 3,
+      hunger: initial?.hunger ?? 3,
       mood: Math.round(energyLevel / 2),
-      digestion: 3,
-      didCardio: false,
-      didResistance: false,
-      claudeDirective: null,
-      notes: '',
+      digestion: initial?.digestion ?? 3,
+      didCardio: initial?.didCardio ?? false,
+      didResistance: initial?.didResistance ?? false,
+      claudeDirective: initial?.claudeDirective ?? null,
+      notes: initial?.notes ?? '',
     });
   };
 
   const stressSources = ['Work', 'Financial', 'Family', 'Health', 'All clear'];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: 'rgba(0,0,0,0.85)' }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="checkin-title"
-    >
+    <SheetPortal>
       <div
-        className="w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden"
-        style={{
-          background: '#1a1a1a',
-          maxHeight: 'min(92dvh, 100%)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
+        className="fixed inset-0 z-[100] flex items-end justify-center"
+        style={{ background: 'rgba(0,0,0,0.85)' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkin-title"
       >
-        {/* Sticky header with Skip always visible */}
         <div
-          className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0"
-          style={{ borderBottom: '1px solid #2a2a2a' }}
+          className="w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden"
+          style={{
+            background: '#1a1a1a',
+            height: 'min(92dvh, 100%)',
+            maxHeight: 'min(92dvh, 100%)',
+          }}
         >
-          <div>
-            <h2 id="checkin-title" className="font-display text-2xl font-bold text-gold tracking-wide">
-              DAILY CHECK-IN
-            </h2>
-            <p className="text-xs text-muted mt-0.5">{formatDisplay(today())}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="px-3 py-2 text-sm font-medium text-muted rounded-lg active:opacity-70"
-            style={{ background: '#2a2a2a' }}
-          >
-            Skip
-          </button>
-        </div>
-
-        {/* Scrollable fields */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-5">
-          {/* Live readiness preview */}
           <div
-            className="rounded-xl p-3 flex items-center justify-between"
-            style={{ background: '#222', border: `1px solid ${readinessColor(liveScore)}33` }}
+            className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0"
+            style={{ borderBottom: '1px solid #2a2a2a' }}
           >
             <div>
-              <p className="text-[10px] text-muted uppercase tracking-wider">Readiness</p>
-              <p className="text-xs text-muted">Updates as you adjust</p>
+              <h2 id="checkin-title" className="font-display text-2xl font-bold text-gold tracking-wide">
+                {editing ? 'UPDATE CHECK-IN' : 'DAILY CHECK-IN'}
+              </h2>
+              <p className="text-xs text-muted mt-0.5">{formatDisplay(today())}</p>
             </div>
-            <div className="text-right">
-              <p className="font-number font-bold text-2xl leading-none" style={{ color: readinessColor(liveScore) }}>
-                {liveScore}
-              </p>
-              <p className="text-[10px] mt-0.5" style={{ color: readinessColor(liveScore) }}>
-                {readinessLabel(liveScore)}
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="px-3 py-2 text-sm font-medium text-muted rounded-lg active:opacity-70"
+              style={{ background: '#2a2a2a' }}
+            >
+              {editing ? 'Close' : 'Skip'}
+            </button>
           </div>
 
-          {/* Sleep */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium">Sleep last night</label>
-              <span className="font-number text-gold text-sm">{sleepHours}h</span>
-            </div>
-            <input
-              type="range" min={4} max={10} step={0.5}
-              value={sleepHours}
-              onChange={e => setSleepHours(Number(e.target.value))}
-              className="w-full accent-gold"
-            />
-            <div className="flex justify-between mt-2">
-              <span className="text-xs text-muted">Quality</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setSleepQuality(n)}
-                    className={`text-lg ${n <= sleepQuality ? 'text-gold' : 'text-muted'}`}
-                  >
-                    ★
-                  </button>
-                ))}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-5">
+            <div
+              className="rounded-xl p-3 flex items-center justify-between"
+              style={{ background: '#222', border: `1px solid ${readinessColor(liveScore)}33` }}
+            >
+              <div>
+                <p className="text-[10px] text-muted uppercase tracking-wider">Readiness</p>
+                <p className="text-xs text-muted">Updates as you adjust</p>
+              </div>
+              <div className="text-right">
+                <p className="font-number font-bold text-2xl leading-none" style={{ color: readinessColor(liveScore) }}>
+                  {liveScore}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: readinessColor(liveScore) }}>
+                  {readinessLabel(liveScore)}
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Energy */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium">Energy right now</label>
-              <span className="font-number text-gold text-sm">{energyLevel}/10</span>
-            </div>
-            <input
-              type="range" min={1} max={10} step={1}
-              value={energyLevel}
-              onChange={e => setEnergyLevel(Number(e.target.value))}
-              className="w-full accent-gold"
-            />
-            <div className="flex justify-between text-xs text-muted">
-              <span>Drained</span><span>Wired</span>
-            </div>
-          </div>
-
-          {/* Stress */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium">Stress level</label>
-              <span className="font-number text-gold text-sm">{stressLevel}/10</span>
-            </div>
-            <input
-              type="range" min={1} max={10} step={1}
-              value={stressLevel}
-              onChange={e => setStressLevel(Number(e.target.value))}
-              className="w-full accent-gold"
-            />
-            <div className="flex justify-between text-xs text-muted">
-              <span>Calm</span><span>Maxed</span>
-            </div>
-          </div>
-
-          {/* Soreness */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium">Soreness</label>
-              <span className="font-number text-gold text-sm">{soreness}/10</span>
-            </div>
-            <input
-              type="range" min={1} max={10} step={1}
-              value={soreness}
-              onChange={e => setSoreness(Number(e.target.value))}
-              className="w-full accent-gold"
-            />
-            <div className="flex justify-between text-xs text-muted">
-              <span>Fresh</span><span>Wrecked</span>
-            </div>
-          </div>
-
-          {stressLevel > 5 && (
             <div>
-              <label className="text-xs text-muted mb-2 block">Stress source</label>
-              <div className="flex flex-wrap gap-2">
-                {stressSources.map(s => (
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-sm font-medium">Sleep last night</label>
+                <span className="font-number text-gold text-sm">{sleepHours}h</span>
+              </div>
+              <input
+                type="range" min={4} max={10} step={0.5}
+                value={sleepHours}
+                onChange={e => setSleepHours(Number(e.target.value))}
+                className="w-full accent-gold"
+              />
+              <div className="flex justify-between mt-2">
+                <span className="text-xs text-muted">Quality</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSleepQuality(n)}
+                      className={`text-lg ${n <= sleepQuality ? 'text-gold' : 'text-muted'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-sm font-medium">Energy right now</label>
+                <span className="font-number text-gold text-sm">{energyLevel}/10</span>
+              </div>
+              <input
+                type="range" min={1} max={10} step={1}
+                value={energyLevel}
+                onChange={e => setEnergyLevel(Number(e.target.value))}
+                className="w-full accent-gold"
+              />
+              <div className="flex justify-between text-xs text-muted">
+                <span>Drained</span><span>Wired</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-sm font-medium">Stress level</label>
+                <span className="font-number text-gold text-sm">{stressLevel}/10</span>
+              </div>
+              <input
+                type="range" min={1} max={10} step={1}
+                value={stressLevel}
+                onChange={e => setStressLevel(Number(e.target.value))}
+                className="w-full accent-gold"
+              />
+              <div className="flex justify-between text-xs text-muted">
+                <span>Calm</span><span>Maxed</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-sm font-medium">Soreness</label>
+                <span className="font-number text-gold text-sm">{soreness}/10</span>
+              </div>
+              <input
+                type="range" min={1} max={10} step={1}
+                value={soreness}
+                onChange={e => setSoreness(Number(e.target.value))}
+                className="w-full accent-gold"
+              />
+              <div className="flex justify-between text-xs text-muted">
+                <span>Fresh</span><span>Wrecked</span>
+              </div>
+            </div>
+
+            {stressLevel > 5 && (
+              <div>
+                <label className="text-xs text-muted mb-2 block">Stress source</label>
+                <div className="flex flex-wrap gap-2">
+                  {stressSources.map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStressSource(s)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        stressSource === s ? 'bg-gold text-black' : 'text-muted'
+                      }`}
+                      style={stressSource !== s ? { background: '#2a2a2a' } : {}}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs text-muted mb-2 block">Fasting status</label>
+              <div className="flex gap-2">
+                {(['fasting', 'window-open'] as const).map(s => (
                   <button
                     key={s}
                     type="button"
-                    onClick={() => setStressSource(s)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      stressSource === s ? 'bg-gold text-black' : 'text-muted'
+                    onClick={() => setFastingStatus(s)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${
+                      fastingStatus === s ? 'bg-gold text-black' : 'text-muted'
                     }`}
-                    style={stressSource !== s ? { background: '#2a2a2a' } : {}}
+                    style={fastingStatus !== s ? { background: '#2a2a2a' } : {}}
                   >
-                    {s}
+                    {s === 'fasting' ? 'Still fasting' : 'Window open'}
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="text-xs text-muted mb-2 block">Fasting status</label>
-            <div className="flex gap-2">
-              {(['fasting', 'window-open'] as const).map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setFastingStatus(s)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${
-                    fastingStatus === s ? 'bg-gold text-black' : 'text-muted'
-                  }`}
-                  style={fastingStatus !== s ? { background: '#2a2a2a' } : {}}
-                >
-                  {s === 'fasting' ? 'Still fasting' : 'Window open'}
-                </button>
-              ))}
+            <div>
+              <label className="text-xs text-muted mb-1 block">One word — how are you showing up today?</label>
+              <input
+                type="text"
+                value={oneWord}
+                onChange={e => setOneWord(e.target.value.split(' ')[0])}
+                placeholder="Focused · Ready · Grounded..."
+                maxLength={20}
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+                style={{ background: '#2a2a2a', color: '#f0ece4' }}
+              />
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-muted mb-1 block">One word — how are you showing up today?</label>
-            <input
-              type="text"
-              value={oneWord}
-              onChange={e => setOneWord(e.target.value.split(' ')[0])}
-              placeholder="Focused · Ready · Grounded..."
-              maxLength={20}
-              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-              style={{ background: '#2a2a2a', color: '#f0ece4' }}
-            />
+          <div
+            className="shrink-0 px-5 pt-3"
+            style={{
+              borderTop: '1px solid #2a2a2a',
+              background: '#1a1a1a',
+              paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="w-full py-3.5 rounded-xl font-display font-bold text-lg tracking-wider text-black active:scale-[0.98] transition-all"
+              style={{ background: '#c9963a' }}
+            >
+              {editing ? `UPDATE · ${liveScore}` : `SET THE DAY · ${liveScore}`}
+            </button>
           </div>
         </div>
-
-        {/* Sticky confirm — always on screen */}
-        <div
-          className="shrink-0 px-5 pt-3 pb-4"
-          style={{ borderTop: '1px solid #2a2a2a', background: '#1a1a1a' }}
-        >
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="w-full py-3.5 rounded-xl font-display font-bold text-lg tracking-wider text-black active:scale-[0.98] transition-all"
-            style={{ background: '#c9963a' }}
-          >
-            SET THE DAY · {liveScore}
-          </button>
-        </div>
       </div>
-    </div>
+    </SheetPortal>
   );
 }
 
@@ -298,7 +302,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const settings = getSettings<AppSettings>('settings');
 
-  const { todayEntry: todayCheckIn, add: addCheckIn } = useCheckIn();
+  const { todayEntry: todayCheckIn, add: addCheckIn, update: updateCheckIn } = useCheckIn();
   const { todayEntry: todayNutrition } = useNutrition();
   const { entries: bodyComp, latest } = useBodyComp();
   const { sessions: sprints } = usePerformance();
@@ -320,34 +324,43 @@ export function HomePage() {
   }, [todayCheckIn, settings?.onboardingComplete]);
 
   const handleCheckInComplete = useCallback((data: Partial<DailyCheckIn>) => {
-    const entry: DailyCheckIn = {
-      id: crypto.randomUUID(),
-      date: today(),
-      sleepHours: data.sleepHours ?? 7,
-      sleepQuality: data.sleepQuality ?? 3,
-      energyLevel: data.energyLevel ?? 5,
-      stressLevel: data.stressLevel ?? 5,
-      stressSource: data.stressSource ?? null,
-      fastingStatus: data.fastingStatus ?? 'fasting',
-      oneWord: data.oneWord ?? '',
-      soreness: data.soreness ?? 3,
-      hunger: data.hunger ?? 3,
-      mood: data.mood ?? 3,
-      digestion: data.digestion ?? 3,
-      didCardio: false,
-      didResistance: false,
-      claudeDirective: null,
-      notes: '',
-      createdAt: new Date().toISOString(),
-    };
-    addCheckIn(entry);
+    if (todayCheckIn) {
+      updateCheckIn(todayCheckIn.id, {
+        ...data,
+        date: today(),
+      });
+    } else {
+      const entry: DailyCheckIn = {
+        id: crypto.randomUUID(),
+        date: today(),
+        sleepHours: data.sleepHours ?? 7,
+        sleepQuality: data.sleepQuality ?? 3,
+        energyLevel: data.energyLevel ?? 5,
+        stressLevel: data.stressLevel ?? 5,
+        stressSource: data.stressSource ?? null,
+        fastingStatus: data.fastingStatus ?? 'fasting',
+        oneWord: data.oneWord ?? '',
+        soreness: data.soreness ?? 3,
+        hunger: data.hunger ?? 3,
+        mood: data.mood ?? 3,
+        digestion: data.digestion ?? 3,
+        didCardio: data.didCardio ?? false,
+        didResistance: data.didResistance ?? false,
+        claudeDirective: data.claudeDirective ?? null,
+        notes: data.notes ?? '',
+        createdAt: new Date().toISOString(),
+      };
+      addCheckIn(entry);
+    }
     setShowCheckIn(false);
-  }, [addCheckIn]);
+  }, [addCheckIn, updateCheckIn, todayCheckIn]);
 
   const handleDismissCheckIn = useCallback(() => {
-    localStorage.setItem(`checkin_dismissed_${today()}`, 'true');
+    if (!todayCheckIn) {
+      localStorage.setItem(`checkin_dismissed_${today()}`, 'true');
+    }
     setShowCheckIn(false);
-  }, []);
+  }, [todayCheckIn]);
 
   if (!settings?.onboardingComplete) {
     return (
@@ -383,30 +396,32 @@ export function HomePage() {
     : null;
 
   return (
-    <div className="overflow-y-auto">
-      {/* Covenant Header */}
-      <div className="px-5 pt-6 pb-4 relative">
+    <div>
+      {/* Covenant Header — compact so readiness stays in first viewport */}
+      <div className="px-5 pt-5 pb-3 relative">
         <button
           type="button"
           onClick={() => navigate('/settings')}
-          className="absolute top-5 right-4 p-2 text-muted"
+          className="absolute top-4 right-4 p-2 text-muted"
         >
           <Settings size={18} />
         </button>
-        <p className="text-xs text-muted tracking-widest uppercase mb-3">All In</p>
-        <div className="font-display font-bold leading-tight" style={{ fontSize: '22px', color: '#f0ece4' }}>
-          My family won't need<br/>
-          <span style={{ color: '#c9963a' }}>to heal from the work</span><br/>
-          I didn't do.
+        <p className="text-xs text-muted tracking-widest uppercase mb-2">All In</p>
+        <div className="font-display font-bold leading-tight pr-8" style={{ fontSize: '20px', color: '#f0ece4' }}>
+          My family won't need{' '}
+          <span style={{ color: '#c9963a' }}>to heal from the work</span>
+          {' '}I didn't do.
         </div>
-        <p className="text-xs text-muted mt-2">{formatDisplay(today())}</p>
+        <p className="text-xs text-muted mt-1.5">{formatDisplay(today())}</p>
       </div>
 
       {/* Readiness Score */}
       <div className="px-4 mb-3">
         {readiness !== null ? (
-          <div
-            className="rounded-xl p-4 flex items-center gap-4"
+          <button
+            type="button"
+            onClick={() => setShowCheckIn(true)}
+            className="w-full rounded-xl p-4 flex items-center gap-4 text-left active:scale-[0.99] transition-transform"
             style={{ background: '#1a1a1a', border: `1px solid ${readinessColor(readiness)}44` }}
           >
             <div
@@ -428,8 +443,9 @@ export function HomePage() {
               <p className="text-xs text-muted truncate">
                 Sleep {todayCheckIn!.sleepHours}h · Energy {todayCheckIn!.energyLevel}/10 · Stress {todayCheckIn!.stressLevel}/10
               </p>
+              <p className="text-[10px] mt-1" style={{ color: '#c9963a' }}>Tap to update</p>
             </div>
-          </div>
+          </button>
         ) : (
           <button
             type="button"
@@ -571,9 +587,19 @@ export function HomePage() {
       {todayCheckIn ? (
         <div className="px-4 mb-3">
           <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#c9963a' }} />
-              <p className="text-xs font-medium text-muted uppercase tracking-wider">Check-In Complete</p>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#c9963a' }} />
+                <p className="text-xs font-medium text-muted uppercase tracking-wider">Check-In Complete</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCheckIn(true)}
+                className="text-xs font-medium"
+                style={{ color: '#c9963a' }}
+              >
+                Edit
+              </button>
             </div>
             <div className="flex gap-4 text-sm flex-wrap">
               <div>
@@ -668,6 +694,7 @@ export function HomePage() {
 
       {showCheckIn && (
         <CheckInModal
+          initial={todayCheckIn}
           onComplete={handleCheckInComplete}
           onDismiss={handleDismissCheckIn}
         />

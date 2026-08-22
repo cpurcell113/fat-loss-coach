@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useBodyComp } from '../hooks/useBodyComp';
 import { useProjections } from '../hooks/useProjections';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -7,7 +8,7 @@ import { TARGETS } from '../constants/baseline';
 import { resolveBaseline, resolvePeak } from '../utils/baseline';
 import type { BodyCompEntry } from '../types';
 import { today, formatDisplay } from '../utils/date-helpers';
-import { Trash2, ChevronDown, ChevronUp, Info, Pencil } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 function StatCard({
   label, value, unit, sub, color,
@@ -26,10 +27,12 @@ function StatCard({
 }
 
 export function BodyPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { entries, add, update, remove, latest } = useBodyComp();
   const projections = useProjections(entries);
   const baseline = resolveBaseline(entries);
   const peak = resolvePeak(entries);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editingBaseline, setEditingBaseline] = useState(false);
@@ -37,6 +40,7 @@ export function BodyPage() {
   const [smm, setSmm] = useState('');
   const [bf, setBf] = useState('');
   const [ecw, setEcw] = useState('');
+  const [scanDate, setScanDate] = useState(today());
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
   const [showEcwInfo, setShowEcwInfo] = useState(false);
@@ -46,14 +50,27 @@ export function BodyPage() {
   const ecwColor = (latest?.ecwRatio ?? 0) >= TARGETS.ecwRatioWarning ? '#8b3a3a' : '#4a7c59';
 
   const openBaselineEdit = () => {
+    const existing = entries.find(e => e.id === 'baseline');
     setEditingBaseline(true);
     setShowForm(true);
     setWeight(String(baseline.weight));
     setSmm(String(baseline.muscleMass));
     setBf(String(baseline.bodyFatPercent));
     setEcw(String(baseline.ecwRatio));
+    setScanDate(existing?.date ?? baseline.date);
     setNotes(baseline.label);
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
+
+  useEffect(() => {
+    if (searchParams.get('editBaseline') === '1') {
+      openBaselineEdit();
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once from deep link
+  }, [searchParams]);
 
   const openNewScan = () => {
     if (showForm && !editingBaseline) {
@@ -63,6 +80,7 @@ export function BodyPage() {
     setEditingBaseline(false);
     setShowForm(true);
     setWeight(''); setSmm(''); setBf(''); setEcw(''); setNotes('');
+    setScanDate(today());
   };
 
   const handleSave = () => {
@@ -73,7 +91,7 @@ export function BodyPage() {
       const existing = entries.find(e => e.id === 'baseline');
       const entry: BodyCompEntry = {
         id: 'baseline',
-        date: existing?.date ?? today(),
+        date: scanDate || existing?.date || today(),
         weight: w,
         muscleMass: smm ? parseFloat(smm) : null,
         bodyFatPercent: bf ? parseFloat(bf) : null,
@@ -87,7 +105,7 @@ export function BodyPage() {
     } else {
       const entry: BodyCompEntry = {
         id: crypto.randomUUID(),
-        date: today(),
+        date: scanDate || today(),
         weight: w,
         muscleMass: smm ? parseFloat(smm) : null,
         bodyFatPercent: bf ? parseFloat(bf) : null,
@@ -122,18 +140,18 @@ export function BodyPage() {
             <p className="text-xs text-muted">Goal: May 12</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-3 relative" style={{ background: '#222', border: '1px solid #333' }}>
+            <div className="rounded-xl p-3" style={{ background: '#222', border: '1px solid #333' }}>
+              <p className="text-[10px] text-muted mb-1">{baseline.label}</p>
+              <p className="text-xs font-medium" style={{ color: '#f0ece4' }}>{baseline.weight} lbs · {baseline.bodyFatPercent}% BF</p>
+              <p className="text-[10px] text-muted mb-2">SMM {baseline.muscleMass} lbs</p>
               <button
                 type="button"
                 onClick={openBaselineEdit}
-                className="absolute top-2 right-2 p-1 text-muted"
-                aria-label="Edit baseline"
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: '#c9963a' }}
               >
-                <Pencil size={12} />
+                Edit Start →
               </button>
-              <p className="text-[10px] text-muted mb-1">{baseline.label}</p>
-              <p className="text-xs font-medium" style={{ color: '#f0ece4' }}>{baseline.weight} lbs · {baseline.bodyFatPercent}% BF</p>
-              <p className="text-[10px] text-muted">SMM {baseline.muscleMass} lbs</p>
             </div>
             <div className="rounded-xl p-3" style={{ background: '#222', border: '1px solid rgba(201,150,58,0.3)' }}>
               <p className="text-[10px]" style={{ color: '#c9963a' }}>Goal</p>
@@ -247,10 +265,24 @@ export function BodyPage() {
         </button>
 
         {showForm && (
-          <div className="rounded-xl p-4 space-y-4" style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.25)' }}>
+          <div
+            ref={formRef}
+            className="rounded-xl p-4 space-y-4"
+            style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.25)' }}
+          >
             <h3 className="font-display font-bold text-sm tracking-wide" style={{ color: '#c9963a' }}>
               {editingBaseline ? 'EDIT START BASELINE' : 'NEW InBody SCAN'}
             </h3>
+            <div>
+              <label className="text-[10px] text-muted">Scan date</label>
+              <input
+                type="date"
+                value={scanDate}
+                onChange={e => setScanDate(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none mt-0.5"
+                style={{ background: '#2a2a2a', color: '#f0ece4' }}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: 'Weight (lbs) *', value: weight, set: setWeight, placeholder: '248.7' },

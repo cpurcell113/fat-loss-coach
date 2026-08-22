@@ -141,10 +141,11 @@ export function OnboardingPage() {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicGranted(true);
+      setTimeout(() => setStep(s => s + 1), 600);
     } catch {
       setMicGranted(false);
+      setStep(s => s + 1);
     }
-    setStep(s => s + 1);
   };
 
   return (

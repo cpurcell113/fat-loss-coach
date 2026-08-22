@@ -70,13 +70,13 @@ export function CheckInPage() {
           unit="hrs"
         />
 
-        <RatingSelector label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} lowLabel="Terrible" highLabel="Great" />
-        <RatingSelector label="Energy Level" value={energyLevel} onChange={setEnergyLevel} lowLabel="Drained" highLabel="Wired" />
-        <RatingSelector label="Stress" value={stressLevel} onChange={setStressLevel} lowLabel="Calm" highLabel="Maxed" />
-        <RatingSelector label="Soreness" value={soreness} onChange={setSoreness} lowLabel="Fresh" highLabel="Wrecked" />
-        <RatingSelector label="Hunger" value={hunger} onChange={setHunger} lowLabel="None" highLabel="Starving" />
-        <RatingSelector label="Mood" value={mood} onChange={setMood} lowLabel="Low" highLabel="Great" />
-        <RatingSelector label="Digestion" value={digestion} onChange={setDigestion} lowLabel="Bad" highLabel="Perfect" />
+        <RatingSelector label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} max={5} lowLabel="Terrible" highLabel="Great" />
+        <RatingSelector label="Energy Level" value={energyLevel} onChange={setEnergyLevel} max={10} lowLabel="Drained" highLabel="Wired" />
+        <RatingSelector label="Stress" value={stressLevel} onChange={setStressLevel} max={10} lowLabel="Calm" highLabel="Maxed" />
+        <RatingSelector label="Soreness" value={soreness} onChange={setSoreness} max={10} lowLabel="Fresh" highLabel="Wrecked" />
+        <RatingSelector label="Hunger" value={hunger} onChange={setHunger} max={10} lowLabel="None" highLabel="Starving" />
+        <RatingSelector label="Mood" value={mood} onChange={setMood} max={10} lowLabel="Low" highLabel="Great" />
+        <RatingSelector label="Digestion" value={digestion} onChange={setDigestion} max={10} lowLabel="Bad" highLabel="Perfect" />
 
         {/* Training toggles */}
         <div className="flex gap-3">

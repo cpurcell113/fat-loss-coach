@@ -260,7 +260,8 @@ export function CoachPage() {
         </div>
       )}
 
-      {/* Input bar */}
+      {/* Input bar — hide while confirming so Cancel/Confirm stay reachable */}
+      {!pendingAction && (
       <div
         className="shrink-0 px-3 py-2.5"
         style={{ background: '#141414', borderTop: '1px solid rgba(201,150,58,0.15)' }}
@@ -310,6 +311,7 @@ export function CoachPage() {
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }
