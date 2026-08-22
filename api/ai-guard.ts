@@ -1,12 +1,8 @@
 /**
- * Server-side AI access control — prevents unbounded client usage on coach's API key.
- *
- * Modes (via env):
- *   AI_CHAT_DISABLED=true          — kill switch, no AI calls
- *   AI_COACH_ACCESS_TOKEN=<secret> — only requests with matching x-coach-token header
- *   AI_DAILY_MESSAGE_LIMIT=15      — per-device daily cap (default 15)
- *   AI_COACH_DAILY_LIMIT=100       — higher cap when coach token matches (default 100)
+ * Server-side AI access control — subscription tier limits + coach override.
  */
+
+import { subscriptionAiDailyLimit, verifySubscriptionToken } from './subscription-crypto';
 
 export interface AiGuardResult {
   allowed: boolean;
@@ -14,6 +10,7 @@ export interface AiGuardResult {
   error?: string;
   remaining?: number;
   limit?: number;
+  tier?: string;
 }
 
 type RateEntry = { count: number; date: string };
@@ -26,17 +23,35 @@ function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getClientKey(req: { headers: Record<string, string | string[] | undefined> }): string {
-  const deviceId = req.headers['x-allin-device-id'];
-  const id = Array.isArray(deviceId) ? deviceId[0] : deviceId;
-  if (id) return `device:${id}`;
+function headerValue(
+  headers: Record<string, string | string[] | undefined>,
+  name: string,
+): string | undefined {
+  const val = headers[name];
+  return Array.isArray(val) ? val[0] : val;
+}
 
-  const forwarded = req.headers['x-forwarded-for'];
-  const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0]?.trim();
+function getDeviceId(req: { headers: Record<string, string | string[] | undefined> }): string {
+  return headerValue(req.headers, 'x-allin-device-id') || 'unknown';
+}
+
+function getClientKey(deviceId: string, req: { headers: Record<string, string | string[] | undefined> }): string {
+  if (deviceId && deviceId !== 'unknown') return `device:${deviceId}`;
+  const ip = headerValue(req.headers, 'x-forwarded-for')?.split(',')[0]?.trim();
   return `ip:${ip || 'unknown'}`;
 }
 
 function checkDailyLimit(key: string, limit: number): AiGuardResult {
+  if (limit <= 0) {
+    return {
+      allowed: false,
+      status: 403,
+      error: 'AI coach is not included in your plan. Upgrade to All In or Concierge.',
+      remaining: 0,
+      limit: 0,
+    };
+  }
+
   if (!store.__allinAiRateLimits) store.__allinAiRateLimits = new Map();
 
   const day = todayUtc();
@@ -51,7 +66,7 @@ function checkDailyLimit(key: string, limit: number): AiGuardResult {
     return {
       allowed: false,
       status: 429,
-      error: `Daily AI limit reached (${limit} messages/day). Resets at midnight UTC.`,
+      error: `Daily AI limit reached (${limit} included in your subscription). Resets at midnight UTC.`,
       remaining: 0,
       limit,
     };
@@ -68,29 +83,35 @@ export function checkAiAccess(req: {
     return {
       allowed: false,
       status: 503,
-      error: 'AI coach is currently unavailable.',
+      error: 'AI coach is temporarily unavailable.',
     };
   }
 
-  const coachTokenEnv = process.env.AI_COACH_ACCESS_TOKEN?.trim();
-  const clientToken = req.headers['x-coach-token'];
-  const clientTokenStr = Array.isArray(clientToken) ? clientToken[0] : clientToken;
-  const key = getClientKey(req);
+  const deviceId = getDeviceId(req);
+  const key = getClientKey(deviceId, req);
 
-  // Coach-only: clients without the secret never hit Anthropic (no cost to you)
-  if (coachTokenEnv) {
-    if (clientTokenStr !== coachTokenEnv) {
-      return {
-        allowed: false,
-        status: 403,
-        error: 'AI coach is included with coaching — message your coach directly for now.',
-      };
-    }
+  // Coach override — your personal use, not billed against client tiers
+  const coachTokenEnv = process.env.AI_COACH_ACCESS_TOKEN?.trim();
+  const clientCoachToken = headerValue(req.headers, 'x-coach-token');
+  if (coachTokenEnv && clientCoachToken === coachTokenEnv) {
     const coachLimit = parseInt(process.env.AI_COACH_DAILY_LIMIT || '100', 10);
-    return checkDailyLimit(`coach:${key}`, coachLimit);
+    const result = checkDailyLimit(`coach:${key}`, coachLimit);
+    return { ...result, tier: 'coach' };
   }
 
-  // No coach token configured — apply conservative default cap for any caller
-  const limit = parseInt(process.env.AI_DAILY_MESSAGE_LIMIT || '15', 10);
-  return checkDailyLimit(key, limit);
+  // Active subscription — AI allowance built into tier price
+  const subToken = headerValue(req.headers, 'x-subscription-token');
+  const subscription = verifySubscriptionToken(subToken, deviceId);
+  if (subscription) {
+    const limit = subscriptionAiDailyLimit(subscription.tier);
+    const result = checkDailyLimit(`sub:${subscription.tier}:${key}`, limit);
+    return { ...result, tier: subscription.tier };
+  }
+
+  // No subscription — no AI cost to coach
+  return {
+    allowed: false,
+    status: 403,
+    error: 'AI coach is included with your All In subscription. View plans to subscribe.',
+  };
 }

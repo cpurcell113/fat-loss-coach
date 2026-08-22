@@ -9,6 +9,7 @@ import { CheckInPage } from './pages/CheckInPage';
 import { BloodworkPage } from './pages/BloodworkPage';
 import { ProjectionsPage } from './pages/ProjectionsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PricingPage } from './pages/PricingPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 
 const router = createHashRouter([
@@ -25,6 +26,7 @@ const router = createHashRouter([
       { path: 'bloodwork', element: <BloodworkPage /> },
       { path: 'projections', element: <ProjectionsPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'pricing', element: <PricingPage /> },
     ],
   },
   { path: '/onboarding', element: <OnboardingPage /> },

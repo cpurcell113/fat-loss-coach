@@ -1,5 +1,6 @@
 const DEVICE_ID_KEY = 'fla_device_id';
 const COACH_TOKEN_KEY = 'fla_coach_token';
+const SUB_TOKEN_KEY = 'fla_subscription_token';
 
 export function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -29,5 +30,7 @@ export function aiRequestHeaders(): Record<string, string> {
   };
   const coachToken = getCoachToken();
   if (coachToken) headers['x-coach-token'] = coachToken;
+  const subToken = localStorage.getItem(SUB_TOKEN_KEY);
+  if (subToken) headers['x-subscription-token'] = subToken;
   return headers;
 }

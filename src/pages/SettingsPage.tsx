@@ -4,6 +4,8 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { getSettings, setSettings } from '../data/storage';
 import { getCoachToken, setCoachToken } from '../lib/ai-access';
+import { getSubscription } from '../lib/subscription';
+import { SUBSCRIPTION_TIERS, aiCogsPercentOfPrice } from '../constants/pricing';
 import type { AppSettings } from '../types';
 import { Download, Upload, Trash2, Check, Eye, EyeOff, Copy } from 'lucide-react';
 
@@ -133,17 +135,32 @@ export function SettingsPage() {
         }
       />
       <div className="px-4 py-4 space-y-4">
-        {/* AI cost control (Whoop model) */}
+        {/* Subscription pricing — AI built into tiers */}
         <Card>
-          <h3 className="text-sm font-medium mb-2">AI Coach — Cost Control</h3>
+          <h3 className="text-sm font-medium mb-2">Subscription &amp; AI Pricing</h3>
           <p className="text-xs text-muted mb-3 leading-relaxed">
-            Whoop includes AI in your subscription — they pay for it from subscription revenue, not per chat from your pocket.
-            Same model here: when clients subscribe via Apple IAP, AI is included with daily caps.
-            Until then, AI is <strong className="text-text-primary">coach-only</strong> so client chats never hit your Anthropic bill.
+            AI cost is built into each tier — clients pay one price, you&apos;re not billed per chat.
+            All In ($297/mo) includes 20 AI messages/day (~{aiCogsPercentOfPrice(SUBSCRIPTION_TIERS[1])}% of revenue goes to API).
           </p>
-          <p className="text-xs text-muted mb-3">
-            In Vercel, set <code className="text-gold">AI_COACH_ACCESS_TOKEN</code> to any secret string.
-            Enter the same value below on your phone only — clients without it cannot use AI.
+          {getSubscription() ? (
+            <p className="text-xs text-success mb-3">
+              Active: {getSubscription()?.tier.replace('_', ' ')} plan
+            </p>
+          ) : null}
+          <button
+            onClick={() => navigate('/pricing')}
+            className="w-full py-2.5 rounded-lg font-medium text-sm bg-gold text-surface-dark"
+          >
+            View plans &amp; activate (coach)
+          </button>
+        </Card>
+
+        {/* Coach token — personal AI access without counting against client tiers */}
+        <Card>
+          <h3 className="text-sm font-medium mb-2">Coach Access Token</h3>
+          <p className="text-xs text-muted mb-3 leading-relaxed">
+            Your personal AI use (not billed against client subscription pools).
+            Set <code className="text-gold">AI_COACH_ACCESS_TOKEN</code> in Vercel, then enter it here on your device only.
           </p>
           <input
             type="password"
@@ -160,9 +177,8 @@ export function SettingsPage() {
             {coachTokenSaved ? '✓ Coach token saved' : 'Save coach token'}
           </button>
           <p className="text-[10px] text-muted mt-2">
-            Optional Vercel vars: <code className="text-gold">AI_CHAT_DISABLED=true</code> (kill switch),
-            {' '}<code className="text-gold">AI_DAILY_MESSAGE_LIMIT=15</code> (client cap when you open access),
-            {' '}<code className="text-gold">AI_COACH_DAILY_LIMIT=100</code> (your cap).
+            Also set <code className="text-gold">SUBSCRIPTION_SIGNING_SECRET</code> in Vercel for tier activation.
+            Optional: <code className="text-gold">AI_CHAT_DISABLED=true</code>, <code className="text-gold">AI_COACH_DAILY_LIMIT=100</code>.
           </p>
         </Card>
 

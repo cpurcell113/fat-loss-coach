@@ -14,6 +14,9 @@ import { ChatWindow } from '../components/chat/ChatWindow';
 import { QuickActions } from '../components/chat/QuickActions';
 import { today } from '../utils/date-helpers';
 import { autoCalories } from '../utils/calculations';
+import { getCoachToken } from '../lib/ai-access';
+import { getSubscription } from '../lib/subscription';
+import { getTier } from '../constants/pricing';
 
 export function CoachPage() {
   const settings = getSettings<AppSettings>('settings');
@@ -163,6 +166,11 @@ export function CoachPage() {
 
   const handleCancel = () => resolveAction(false, 'User cancelled.');
 
+  const sub = getSubscription();
+  const hasAiAccess = Boolean(
+    getCoachToken() || (sub && (getTier(sub.tier)?.aiMessagesPerDay ?? 0) > 0),
+  );
+
   if (!settings?.onboardingComplete) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 text-center">
@@ -205,6 +213,27 @@ export function CoachPage() {
           </button>
         </div>
       </div>
+
+      {!hasAiAccess && (
+        <div className="mx-4 mt-3 rounded-xl px-4 py-3 text-sm" style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.25)' }}>
+          <p className="font-medium" style={{ color: '#c9963a' }}>AI coach requires a subscription</p>
+          <p className="text-xs text-muted mt-1">
+            Included with All In ($297/mo) — 20 questions/day built into the price. No per-chat billing.
+          </p>
+          <button
+            onClick={() => navigate('/pricing')}
+            className="mt-2 text-xs font-medium text-gold underline"
+          >
+            View plans →
+          </button>
+        </div>
+      )}
+
+      {sub && (
+        <div className="mx-4 mt-2 text-[10px] text-muted text-center capitalize">
+          {sub.tier.replace('_', ' ')} plan · AI included
+        </div>
+      )}
 
       {/* Messages */}
       <ChatWindow
