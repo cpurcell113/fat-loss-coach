@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { getSettings, setSettings } from '../data/storage';
+import { getCoachToken, setCoachToken } from '../lib/ai-access';
 import type { AppSettings } from '../types';
 import { Download, Upload, Trash2, Check, Eye, EyeOff, Copy } from 'lucide-react';
 
@@ -12,6 +13,8 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const settings = getSettings<AppSettings>('settings');
   const [apiKey, setApiKey] = useState(settings?.apiKey || '');
+  const [coachToken, setCoachTokenState] = useState(getCoachToken());
+  const [coachTokenSaved, setCoachTokenSaved] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -38,6 +41,12 @@ export function SettingsPage() {
     if (voice) utterance.voice = voice;
     utterance.rate = 0.95;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const handleSaveCoachToken = () => {
+    setCoachToken(coachToken);
+    setCoachTokenSaved(true);
+    setTimeout(() => setCoachTokenSaved(false), 1500);
   };
 
   const handleSaveKey = () => {
@@ -124,13 +133,36 @@ export function SettingsPage() {
         }
       />
       <div className="px-4 py-4 space-y-4">
-        {/* AI (server-side) */}
+        {/* AI cost control (Whoop model) */}
         <Card>
-          <h3 className="text-sm font-medium mb-2">AI Coach &amp; Nutrition Scanning</h3>
-          <p className="text-xs text-muted">
-            Runs through the server on your Vercel deployment — not from anyone&apos;s personal API key.
-            Set <code className="text-gold">ANTHROPIC_API_KEY</code> in Vercel env vars to enable it.
-            Clients never enter a key; you control cost from one place.
+          <h3 className="text-sm font-medium mb-2">AI Coach — Cost Control</h3>
+          <p className="text-xs text-muted mb-3 leading-relaxed">
+            Whoop includes AI in your subscription — they pay for it from subscription revenue, not per chat from your pocket.
+            Same model here: when clients subscribe via Apple IAP, AI is included with daily caps.
+            Until then, AI is <strong className="text-text-primary">coach-only</strong> so client chats never hit your Anthropic bill.
+          </p>
+          <p className="text-xs text-muted mb-3">
+            In Vercel, set <code className="text-gold">AI_COACH_ACCESS_TOKEN</code> to any secret string.
+            Enter the same value below on your phone only — clients without it cannot use AI.
+          </p>
+          <input
+            type="password"
+            value={coachToken}
+            onChange={e => setCoachTokenState(e.target.value)}
+            placeholder="Your coach access token"
+            autoComplete="off"
+            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10 mb-2"
+          />
+          <button
+            onClick={handleSaveCoachToken}
+            className={`w-full py-2.5 rounded-lg font-medium text-sm ${coachTokenSaved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
+          >
+            {coachTokenSaved ? '✓ Coach token saved' : 'Save coach token'}
+          </button>
+          <p className="text-[10px] text-muted mt-2">
+            Optional Vercel vars: <code className="text-gold">AI_CHAT_DISABLED=true</code> (kill switch),
+            {' '}<code className="text-gold">AI_DAILY_MESSAGE_LIMIT=15</code> (client cap when you open access),
+            {' '}<code className="text-gold">AI_COACH_DAILY_LIMIT=100</code> (your cap).
           </p>
         </Card>
 

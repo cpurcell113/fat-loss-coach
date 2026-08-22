@@ -6,6 +6,7 @@ import { PROTEIN_TARGET } from '../constants/baseline';
 import { autoCalories } from '../utils/calculations';
 import type { NutritionEntry } from '../types';
 import { today } from '../utils/date-helpers';
+import { aiRequestHeaders } from '../lib/ai-access';
 import { Camera, FileImage, Plus, X } from 'lucide-react';
 
 // ─── Fasting Timer ─────────────────────────────────────────────────────────────
@@ -122,7 +123,7 @@ export function FuelPage() {
 
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: aiRequestHeaders(),
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 256,

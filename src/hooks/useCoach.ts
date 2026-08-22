@@ -3,6 +3,7 @@ import type { ChatMessage, BodyCompEntry, NutritionEntry, DailyCheckIn, SprintSe
 import { COACH_SYSTEM_PROMPT } from '../constants/coach-prompt';
 import { buildCoachContext } from '../utils/context-builder';
 import { getCollection, setCollection } from '../data/storage';
+import { aiRequestHeaders } from '../lib/ai-access';
 
 const MAX_HISTORY = 50;
 const STORAGE_KEY = 'chat_history';
@@ -88,12 +89,19 @@ const COACH_TOOLS = [
 async function callApi(body: object): Promise<any> {
   const res = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: aiRequestHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Server error ${res.status}`);
+    const msg = err.error || `Server error ${res.status}`;
+    if (res.status === 403) {
+      throw new Error(msg);
+    }
+    if (res.status === 429) {
+      throw new Error(msg);
+    }
+    throw new Error(msg);
   }
   return res.json();
 }
