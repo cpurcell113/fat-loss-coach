@@ -4,10 +4,9 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { getSettings, setSettings } from '../data/storage';
 import { getCoachToken, setCoachToken } from '../lib/ai-access';
-import { getSubscription } from '../lib/subscription';
-import { SUBSCRIPTION_TIERS, aiCogsPercentOfPrice } from '../constants/pricing';
+import { SUBSCRIPTION_TIERS } from '../constants/pricing';
 import type { AppSettings } from '../types';
-import { Download, Upload, Trash2, Check, Eye, EyeOff, Copy } from 'lucide-react';
+import { Download, Upload, Trash2, Check, Eye, EyeOff, Copy, ChevronDown } from 'lucide-react';
 
 const VOICE_NAME_KEY = 'allin_voice_name';
 
@@ -20,6 +19,7 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem(VOICE_NAME_KEY) || '');
 
@@ -77,7 +77,7 @@ export function SettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fat-loss-coach-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `all-in-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -135,93 +135,39 @@ export function SettingsPage() {
         }
       />
       <div className="px-4 py-4 space-y-4">
-        {/* Subscription pricing — AI built into tiers */}
         <Card>
-          <h3 className="text-sm font-medium mb-2">Subscription &amp; AI Pricing</h3>
-          <p className="text-xs text-muted mb-3 leading-relaxed">
-            Right now (solo): AI works with just your Vercel <code className="text-gold">ANTHROPIC_API_KEY</code> — no phone setup.
-            When you add clients, set <code className="text-gold">AI_COACH_ACCESS_TOKEN</code> to lock AI behind paid plans.
-            All In ($297/mo) includes 20 AI messages/day (~{aiCogsPercentOfPrice(SUBSCRIPTION_TIERS[1])}% of revenue).
+          <h3 className="text-sm font-medium mb-2">Walkthrough mode</h3>
+          <p className="text-xs text-muted leading-relaxed">
+            Run through the app and send feedback. No API keys needed on your phone —
+            AI runs from the server. When you&apos;re ready for TestFlight / App Store,
+            you&apos;ll handle keys while the Apple-ready build is set up.
           </p>
-          {getSubscription() ? (
-            <p className="text-xs text-success mb-3">
-              Active: {getSubscription()?.tier.replace('_', ' ')} plan
-            </p>
-          ) : null}
+        </Card>
+
+        <Card>
+          <h3 className="text-sm font-medium mb-2">Plans (preview)</h3>
+          <p className="text-xs text-muted mb-3 leading-relaxed">
+            How client pricing will work when you open the roster — AI included in the subscription, not billed per chat.
+          </p>
+          <div className="space-y-2 mb-3">
+            {SUBSCRIPTION_TIERS.map(t => (
+              <div key={t.id} className="flex justify-between text-sm">
+                <span style={{ color: '#f0ece4' }}>{t.name}</span>
+                <span className="text-muted">
+                  ${t.priceMonthly}/mo
+                  {t.aiMessagesPerDay > 0 ? ` · ${t.aiMessagesPerDay} AI/day` : ' · coach chat only'}
+                </span>
+              </div>
+            ))}
+          </div>
           <button
             onClick={() => navigate('/pricing')}
             className="w-full py-2.5 rounded-lg font-medium text-sm bg-gold text-surface-dark"
           >
-            View plans
+            See full plan details
           </button>
         </Card>
 
-        {/* Coach token — only needed when locking clients out */}
-        <Card>
-          <h3 className="text-sm font-medium mb-2">Coach Access Token (optional)</h3>
-          <p className="text-xs text-muted mb-3 leading-relaxed">
-            Leave blank for solo use. When you&apos;re ready to gate client AI, set the matching
-            {' '}<code className="text-gold">AI_COACH_ACCESS_TOKEN</code> in Vercel and paste it here on your device only.
-          </p>
-          <input
-            type="password"
-            value={coachToken}
-            onChange={e => setCoachTokenState(e.target.value)}
-            placeholder="Your coach access token"
-            autoComplete="off"
-            className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10 mb-2"
-          />
-          <button
-            onClick={handleSaveCoachToken}
-            className={`w-full py-2.5 rounded-lg font-medium text-sm ${coachTokenSaved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
-          >
-            {coachTokenSaved ? '✓ Coach token saved' : 'Save coach token'}
-          </button>
-          <p className="text-[10px] text-muted mt-2">
-            Also set <code className="text-gold">SUBSCRIPTION_SIGNING_SECRET</code> in Vercel for tier activation.
-            Optional: <code className="text-gold">AI_CHAT_DISABLED=true</code>, <code className="text-gold">AI_COACH_DAILY_LIMIT=100</code>.
-          </p>
-        </Card>
-
-        {/* Optional local dev key — hidden unless already set */}
-        {apiKey && (
-          <Card>
-            <h3 className="text-sm font-medium mb-2">Legacy Local API Key</h3>
-            <p className="text-xs text-muted mb-3">No longer required. AI features use the server key above.</p>
-            <div className="flex items-center gap-2 mb-2">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder="sk-ant-..."
-                className="flex-1 bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10"
-              />
-              <button
-                onClick={() => setShowKey(s => !s)}
-                className="p-2.5 rounded-lg bg-surface-alt border border-gold/10 text-muted"
-                title={showKey ? 'Hide key' : 'Show key'}
-              >
-                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleCopy}
-                className="flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 bg-surface-alt border border-gold/10 text-muted"
-              >
-                {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Key</>}
-              </button>
-              <button
-                onClick={handleSaveKey}
-                className={`flex-1 py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
-              >
-                {saved ? '✓ Saved' : 'Save Key'}
-              </button>
-            </div>
-          </Card>
-        )}
-
-        {/* Voice */}
         {'speechSynthesis' in window && sortedVoices.length > 0 && (
           <Card>
             <h3 className="text-sm font-medium mb-1">Voice</h3>
@@ -253,13 +199,9 @@ export function SettingsPage() {
                 );
               })}
             </div>
-            <p className="text-[10px] text-muted mt-2">
-              For better voices on iPhone: Settings → Accessibility → Spoken Content → Voices → English → download a Premium voice.
-            </p>
           </Card>
         )}
 
-        {/* Data Management */}
         <Card>
           <h3 className="text-sm font-medium mb-3">Data</h3>
           <div className="space-y-2">
@@ -281,6 +223,65 @@ export function SettingsPage() {
             </button>
           </div>
         </Card>
+
+        <button
+          onClick={() => setShowAdvanced(s => !s)}
+          className="flex items-center justify-between w-full px-1 py-2 text-xs text-muted"
+        >
+          <span>Advanced (not needed for walkthrough)</span>
+          <ChevronDown size={14} style={{ transform: showAdvanced ? 'rotate(180deg)' : undefined }} />
+        </button>
+
+        {showAdvanced && (
+          <>
+            <Card>
+              <h3 className="text-sm font-medium mb-2">Coach Access Token</h3>
+              <p className="text-xs text-muted mb-3">
+                Only for locking client AI later. Leave blank for now.
+              </p>
+              <input
+                type="password"
+                value={coachToken}
+                onChange={e => setCoachTokenState(e.target.value)}
+                placeholder="Optional"
+                autoComplete="off"
+                className="w-full bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none border border-gold/10 mb-2"
+              />
+              <button
+                onClick={handleSaveCoachToken}
+                className={`w-full py-2.5 rounded-lg font-medium text-sm ${coachTokenSaved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
+              >
+                {coachTokenSaved ? '✓ Saved' : 'Save'}
+              </button>
+            </Card>
+
+            {apiKey ? (
+              <Card>
+                <h3 className="text-sm font-medium mb-2">Legacy Local API Key</h3>
+                <p className="text-xs text-muted mb-3">Unused — AI is server-side.</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                    className="flex-1 bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none border border-gold/10"
+                  />
+                  <button onClick={() => setShowKey(s => !s)} className="p-2.5 rounded-lg bg-surface-alt border border-gold/10 text-muted">
+                    {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleCopy} className="flex-1 py-2.5 rounded-lg text-sm bg-surface-alt border border-gold/10 text-muted flex items-center justify-center gap-1.5">
+                    {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+                  </button>
+                  <button onClick={handleSaveKey} className={`flex-1 py-2.5 rounded-lg text-sm ${saved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}>
+                    {saved ? '✓ Saved' : 'Save'}
+                  </button>
+                </div>
+              </Card>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );
