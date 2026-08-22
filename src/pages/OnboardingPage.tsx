@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Anthropic from '@anthropic-ai/sdk';
 import { getSettings, setSettings } from '../data/storage';
 import type { AppSettings } from '../types';
 import { BASELINE, PROGRAM_START, PROGRAM_END, TARGETS, PROTEIN_TARGET } from '../constants/baseline';
@@ -11,32 +10,11 @@ export function OnboardingPage() {
   const existing = getSettings<AppSettings>('settings');
 
   const [step, setStep] = useState(0);
-  const [apiKey, setApiKey] = useState(existing?.apiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || '');
   const [micGranted, setMicGranted] = useState(false);
-  const [keyError, setKeyError] = useState('');
-  const [keyValidating, setKeyValidating] = useState(false);
-
-  const validateKey = async () => {
-    if (!apiKey.trim()) { setKeyError('Paste your API key above.'); return; }
-    setKeyValidating(true);
-    setKeyError('');
-    try {
-      const client = new Anthropic({ apiKey: apiKey.trim(), dangerouslyAllowBrowser: true });
-      await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] });
-      setStep(2);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Invalid key';
-      if (msg.includes('401') || msg.includes('auth')) setKeyError('Invalid API key — double-check and try again.');
-      else if (msg.includes('402') || msg.includes('credit')) setKeyError('No credits on this key. Add credits at console.anthropic.com.');
-      else setKeyError(`Error: ${msg}`);
-    } finally {
-      setKeyValidating(false);
-    }
-  };
 
   const handleComplete = () => {
     const settings: AppSettings = {
-      apiKey,
+      apiKey: existing?.apiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || '',
       startDate: PROGRAM_START,
       endDate: PROGRAM_END,
       startWeight: BASELINE.weight,
@@ -87,48 +65,8 @@ export function OnboardingPage() {
         </div>
       )}
 
-      {/* Step 1: API Key */}
+      {/* Step 1: Baseline loaded */}
       {step === 1 && (
-        <div className="flex-1 flex flex-col px-6 py-10">
-          <h2 className="font-display font-bold text-3xl mb-1" style={{ color: '#c9963a' }}>CLAUDE API KEY</h2>
-          <p className="text-sm text-muted mb-6">
-            Your AI coach runs on Claude. Get your key at console.anthropic.com — $5 in credits lasts months for personal use.
-          </p>
-
-          <input
-            type="password"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            placeholder="sk-ant-..."
-            className="w-full rounded-xl px-4 py-3.5 text-sm outline-none mb-3"
-            style={{ background: '#1a1a1a', color: '#f0ece4', border: '1px solid rgba(201,150,58,0.2)' }}
-            autoComplete="off"
-          />
-          <p className="text-xs text-muted mb-3">
-            Stored locally on your device. Never sent anywhere except directly to Anthropic.
-          </p>
-          {keyError && (
-            <p className="text-xs mb-auto" style={{ color: '#8b3a3a' }}>{keyError}</p>
-          )}
-
-          <div className="flex gap-3 mt-8">
-            <button onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl text-muted font-medium" style={{ background: '#1a1a1a' }}>
-              Back
-            </button>
-            <button
-              onClick={validateKey}
-              disabled={keyValidating}
-              className="flex-1 py-3 rounded-xl font-display font-bold text-base tracking-wide text-black disabled:opacity-60"
-              style={{ background: '#c9963a' }}
-            >
-              {keyValidating ? 'CHECKING...' : 'NEXT'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Baseline loaded */}
-      {step === 2 && (
         <div className="flex-1 flex flex-col px-6 py-10">
           <h2 className="font-display font-bold text-3xl mb-1" style={{ color: '#c9963a' }}>BASELINE LOADED</h2>
           <p className="text-sm text-muted mb-6">Your InBody scan history is pre-loaded. This is where you are and where you've been.</p>
@@ -158,11 +96,11 @@ export function OnboardingPage() {
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-muted font-medium" style={{ background: '#1a1a1a' }}>
+            <button onClick={() => setStep(0)} className="flex-1 py-3 rounded-xl text-muted font-medium" style={{ background: '#1a1a1a' }}>
               Back
             </button>
             <button
-              onClick={() => setStep(3)}
+              onClick={() => setStep(2)}
               className="flex-1 py-3 rounded-xl font-display font-bold text-base tracking-wide text-black"
               style={{ background: '#c9963a' }}
             >
@@ -172,8 +110,8 @@ export function OnboardingPage() {
         </div>
       )}
 
-      {/* Step 3: Protocol */}
-      {step === 3 && (
+      {/* Step 2: Protocol */}
+      {step === 2 && (
         <div className="flex-1 flex flex-col px-6 py-10 overflow-y-auto">
           <h2 className="font-display font-bold text-3xl mb-1" style={{ color: '#c9963a' }}>YOUR PROTOCOL</h2>
           <p className="text-sm text-muted mb-5">What produced your August 2025 results. Rebuild it exactly.</p>
@@ -197,11 +135,11 @@ export function OnboardingPage() {
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl text-muted font-medium" style={{ background: '#1a1a1a' }}>
+            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-muted font-medium" style={{ background: '#1a1a1a' }}>
               Back
             </button>
             <button
-              onClick={() => setStep(4)}
+              onClick={() => setStep(3)}
               className="flex-1 py-3 rounded-xl font-display font-bold text-base tracking-wide text-black"
               style={{ background: '#c9963a' }}
             >
@@ -211,8 +149,8 @@ export function OnboardingPage() {
         </div>
       )}
 
-      {/* Step 4: Microphone */}
-      {step === 4 && (
+      {/* Step 3: Microphone */}
+      {step === 3 && (
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="text-5xl mb-4">🎙️</div>
           <h2 className="font-display font-bold text-3xl mb-2" style={{ color: '#c9963a' }}>VOICE COACH</h2>
@@ -228,7 +166,7 @@ export function OnboardingPage() {
             ALLOW MICROPHONE
           </button>
           <button
-            onClick={() => setStep(5)}
+            onClick={() => setStep(4)}
             className="text-sm text-muted"
           >
             Skip — text only
@@ -237,8 +175,8 @@ export function OnboardingPage() {
         </div>
       )}
 
-      {/* Step 5: Install */}
-      {step === 5 && (
+      {/* Step 4: Install */}
+      {step === 4 && (
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="text-5xl mb-4">📱</div>
           <h2 className="font-display font-bold text-3xl mb-2" style={{ color: '#c9963a' }}>ADD TO HOME SCREEN</h2>

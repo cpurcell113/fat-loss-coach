@@ -124,41 +124,53 @@ export function SettingsPage() {
         }
       />
       <div className="px-4 py-4 space-y-4">
-        {/* API Key */}
+        {/* AI (server-side) */}
         <Card>
-          <h3 className="text-sm font-medium mb-2">Anthropic API Key</h3>
-          <p className="text-xs text-muted mb-3">Powers your AI coach. Stored locally on this device only.</p>
-          <div className="flex items-center gap-2 mb-2">
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-              placeholder="sk-ant-..."
-              className="flex-1 bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10"
-            />
-            <button
-              onClick={() => setShowKey(s => !s)}
-              className="p-2.5 rounded-lg bg-surface-alt border border-gold/10 text-muted"
-              title={showKey ? 'Hide key' : 'Show key'}
-            >
-              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCopy}
-              className="flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 bg-surface-alt border border-gold/10 text-muted"
-            >
-              {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Key</>}
-            </button>
-            <button
-              onClick={handleSaveKey}
-              className={`flex-1 py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
-            >
-              {saved ? '✓ Saved' : 'Save Key'}
-            </button>
-          </div>
+          <h3 className="text-sm font-medium mb-2">AI Coach &amp; Nutrition Scanning</h3>
+          <p className="text-xs text-muted">
+            Runs through the server on your Vercel deployment — not from anyone&apos;s personal API key.
+            Set <code className="text-gold">ANTHROPIC_API_KEY</code> in Vercel env vars to enable it.
+            Clients never enter a key; you control cost from one place.
+          </p>
         </Card>
+
+        {/* Optional local dev key — hidden unless already set */}
+        {apiKey && (
+          <Card>
+            <h3 className="text-sm font-medium mb-2">Legacy Local API Key</h3>
+            <p className="text-xs text-muted mb-3">No longer required. AI features use the server key above.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                placeholder="sk-ant-..."
+                className="flex-1 bg-surface-alt rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-gold/30 border border-gold/10"
+              />
+              <button
+                onClick={() => setShowKey(s => !s)}
+                className="p-2.5 rounded-lg bg-surface-alt border border-gold/10 text-muted"
+                title={showKey ? 'Hide key' : 'Show key'}
+              >
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopy}
+                className="flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 bg-surface-alt border border-gold/10 text-muted"
+              >
+                {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Key</>}
+              </button>
+              <button
+                onClick={handleSaveKey}
+                className={`flex-1 py-2.5 rounded-lg font-medium text-sm ${saved ? 'bg-success text-white' : 'bg-gold text-surface-dark'}`}
+              >
+                {saved ? '✓ Saved' : 'Save Key'}
+              </button>
+            </div>
+          </Card>
+        )}
 
         {/* Voice */}
         {'speechSynthesis' in window && sortedVoices.length > 0 && (

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import Anthropic from '@anthropic-ai/sdk';
 import { useNutrition } from '../hooks/useNutrition';
 import { PageHeader } from '../components/layout/PageHeader';
 import { MACRO_TARGETS, CALORIE_RANGE } from '../constants/macros';
@@ -7,8 +6,6 @@ import { PROTEIN_TARGET } from '../constants/baseline';
 import { autoCalories } from '../utils/calculations';
 import type { NutritionEntry } from '../types';
 import { today } from '../utils/date-helpers';
-import { getSettings } from '../data/storage';
-import type { AppSettings } from '../types';
 import { Camera, FileImage, Plus, X } from 'lucide-react';
 
 // ─── Fasting Timer ─────────────────────────────────────────────────────────────
@@ -111,9 +108,6 @@ export function FuelPage() {
   const cronoInputRef = useRef<HTMLInputElement>(null);
 
   const runVision = async (file: File, mode: 'food' | 'cronometer') => {
-    const settings = getSettings<AppSettings>('settings');
-    if (!settings?.apiKey) { setScanError('No API key — add it in Settings.'); return; }
-
     setScanning(true);
     setScanResult(null);
     setScanError('');
@@ -121,22 +115,31 @@ export function FuelPage() {
     try {
       const base64 = await fileToBase64(file);
       const mediaType = (file.type || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
-      const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
 
       const prompt = mode === 'cronometer'
         ? 'This is a Cronometer nutrition screenshot. Extract the daily totals. Return ONLY valid JSON: {"name":"Cronometer import","protein":number,"carbs":number,"fats":number,"calories":number,"serving":"daily total"}'
         : 'Identify the food in this photo and estimate macros for the visible portion. Return ONLY valid JSON: {"name":"food name","protein":number,"carbs":number,"fats":number,"calories":number,"serving":"portion description"}';
 
-      const res = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 256,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-          { type: 'text', text: prompt },
-        ]}],
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 256,
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: prompt },
+          ]}],
+        }),
       });
 
-      const text = res.content[0].type === 'text' ? res.content[0].text : '';
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Server error ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text = data.content?.[0]?.type === 'text' ? data.content[0].text : '';
       const json = text.match(/\{[\s\S]*\}/)?.[0];
       if (!json) throw new Error('Could not parse response');
       setScanResult(JSON.parse(json));
