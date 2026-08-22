@@ -139,8 +139,9 @@ export function SettingsPage() {
         <Card>
           <h3 className="text-sm font-medium mb-2">Subscription &amp; AI Pricing</h3>
           <p className="text-xs text-muted mb-3 leading-relaxed">
-            AI cost is built into each tier — clients pay one price, you&apos;re not billed per chat.
-            All In ($297/mo) includes 20 AI messages/day (~{aiCogsPercentOfPrice(SUBSCRIPTION_TIERS[1])}% of revenue goes to API).
+            Right now (solo): AI works with just your Vercel <code className="text-gold">ANTHROPIC_API_KEY</code> — no phone setup.
+            When you add clients, set <code className="text-gold">AI_COACH_ACCESS_TOKEN</code> to lock AI behind paid plans.
+            All In ($297/mo) includes 20 AI messages/day (~{aiCogsPercentOfPrice(SUBSCRIPTION_TIERS[1])}% of revenue).
           </p>
           {getSubscription() ? (
             <p className="text-xs text-success mb-3">
@@ -151,16 +152,16 @@ export function SettingsPage() {
             onClick={() => navigate('/pricing')}
             className="w-full py-2.5 rounded-lg font-medium text-sm bg-gold text-surface-dark"
           >
-            View plans &amp; activate (coach)
+            View plans
           </button>
         </Card>
 
-        {/* Coach token — personal AI access without counting against client tiers */}
+        {/* Coach token — only needed when locking clients out */}
         <Card>
-          <h3 className="text-sm font-medium mb-2">Coach Access Token</h3>
+          <h3 className="text-sm font-medium mb-2">Coach Access Token (optional)</h3>
           <p className="text-xs text-muted mb-3 leading-relaxed">
-            Your personal AI use (not billed against client subscription pools).
-            Set <code className="text-gold">AI_COACH_ACCESS_TOKEN</code> in Vercel, then enter it here on your device only.
+            Leave blank for solo use. When you&apos;re ready to gate client AI, set the matching
+            {' '}<code className="text-gold">AI_COACH_ACCESS_TOKEN</code> in Vercel and paste it here on your device only.
           </p>
           <input
             type="password"

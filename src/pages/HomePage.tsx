@@ -262,13 +262,14 @@ export function HomePage() {
 
   if (!settings?.onboardingComplete) {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+      <div className="flex flex-col items-center justify-center h-full px-6 text-center relative z-10">
         <div className="font-display text-3xl font-bold leading-snug mb-6" style={{ color: '#f0ece4' }}>
           <span>My family won't need</span><br/>
           <span style={{ color: '#c9963a' }}>to heal from the work</span><br/>
           <span>I didn't do.</span>
         </div>
         <button
+          type="button"
           onClick={() => navigate('/onboarding')}
           className="px-8 py-3 rounded-xl font-display font-bold text-lg tracking-wide text-black active:scale-95 transition-transform"
           style={{ background: '#c9963a' }}

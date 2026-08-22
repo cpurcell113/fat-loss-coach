@@ -1,5 +1,11 @@
 /**
  * Server-side AI access control — subscription tier limits + coach override.
+ *
+ * Solo mode (no AI_COACH_ACCESS_TOKEN): anyone can use AI with a daily cap.
+ *   → You only need ANTHROPIC_API_KEY on Vercel. No phone token setup.
+ *
+ * Multi-client mode (AI_COACH_ACCESS_TOKEN set): require coach token OR paid
+ *   subscription. Clients without either get 403 before any Anthropic call.
  */
 
 import { subscriptionAiDailyLimit, verifySubscriptionToken } from './subscription-crypto';
@@ -66,7 +72,7 @@ function checkDailyLimit(key: string, limit: number): AiGuardResult {
     return {
       allowed: false,
       status: 429,
-      error: `Daily AI limit reached (${limit} included in your subscription). Resets at midnight UTC.`,
+      error: `Daily AI limit reached (${limit} included). Resets at midnight UTC.`,
       remaining: 0,
       limit,
     };
@@ -89,17 +95,17 @@ export function checkAiAccess(req: {
 
   const deviceId = getDeviceId(req);
   const key = getClientKey(deviceId, req);
-
-  // Coach override — your personal use, not billed against client tiers
   const coachTokenEnv = process.env.AI_COACH_ACCESS_TOKEN?.trim();
   const clientCoachToken = headerValue(req.headers, 'x-coach-token');
+
+  // Coach personal override
   if (coachTokenEnv && clientCoachToken === coachTokenEnv) {
     const coachLimit = parseInt(process.env.AI_COACH_DAILY_LIMIT || '100', 10);
     const result = checkDailyLimit(`coach:${key}`, coachLimit);
     return { ...result, tier: 'coach' };
   }
 
-  // Active subscription — AI allowance built into tier price
+  // Paid subscription — AI allowance baked into tier price
   const subToken = headerValue(req.headers, 'x-subscription-token');
   const subscription = verifySubscriptionToken(subToken, deviceId);
   if (subscription) {
@@ -108,10 +114,17 @@ export function checkAiAccess(req: {
     return { ...result, tier: subscription.tier };
   }
 
-  // No subscription — no AI cost to coach
-  return {
-    allowed: false,
-    status: 403,
-    error: 'AI coach is included with your All In subscription. View plans to subscribe.',
-  };
+  // Multi-client lock: when coach token is configured, lock out everyone else
+  if (coachTokenEnv) {
+    return {
+      allowed: false,
+      status: 403,
+      error: 'AI coach is included with your All In subscription. View plans to subscribe.',
+    };
+  }
+
+  // Solo mode: only ANTHROPIC_API_KEY required — daily cap protects the bill
+  const soloLimit = parseInt(process.env.AI_DAILY_MESSAGE_LIMIT || '30', 10);
+  const result = checkDailyLimit(`solo:${key}`, soloLimit);
+  return { ...result, tier: 'solo' };
 }

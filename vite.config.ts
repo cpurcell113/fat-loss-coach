@@ -10,6 +10,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Force clients to pick up new builds (phone PWAs cache aggressively)
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+      },
       devOptions: { enabled: true },
       includeAssets: ['favicon.svg'],
       manifest: {
@@ -27,9 +34,6 @@ export default defineConfig({
           { src: '/favicon.svg', sizes: '512x512', type: 'image/svg+xml' },
           { src: '/favicon.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
         ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
   ],
