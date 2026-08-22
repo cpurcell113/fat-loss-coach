@@ -214,43 +214,55 @@ export function CoachPage() {
         isSpeaking={isSpeaking}
       />
 
-      {/* Quick actions */}
-      <QuickActions onSelect={sendMessage} disabled={isStreaming} />
+      {/* Quick actions — hide when confirming so Cancel/Confirm stay on screen */}
+      {!pendingAction && (
+        <QuickActions onSelect={sendMessage} disabled={isStreaming} />
+      )}
 
-      {/* Pending action confirmation card */}
+      {/* Sticky confirm bar — always above input, no scroll needed */}
       {pendingAction && (
         <div
-          className="mx-3 mb-2 rounded-xl p-4"
-          style={{ background: '#1a1a1a', border: '2px solid rgba(201,150,58,0.5)' }}
+          className="shrink-0 px-3 pt-2 pb-1"
+          style={{ background: '#141414', borderTop: '1px solid rgba(201,150,58,0.35)' }}
         >
-          <p className="font-display font-bold text-[10px] tracking-widest mb-2" style={{ color: '#c9963a' }}>
-            PROPOSED UPDATE
-          </p>
-          <p className="text-sm leading-snug mb-4 whitespace-pre-line" style={{ color: '#f0ece4' }}>
-            {pendingAction.displayText}
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={handleCancel}
-              className="flex-1 py-2.5 rounded-xl font-display font-bold text-sm tracking-wide text-muted flex items-center justify-center gap-1.5"
-              style={{ background: '#2a2a2a' }}
+          <div
+            className="rounded-xl p-3"
+            style={{ background: '#1a1a1a', border: '2px solid rgba(201,150,58,0.5)' }}
+          >
+            <p className="font-display font-bold text-[10px] tracking-widest mb-1.5" style={{ color: '#c9963a' }}>
+              PROPOSED UPDATE
+            </p>
+            <p
+              className="text-sm leading-snug mb-3 whitespace-pre-line max-h-24 overflow-y-auto"
+              style={{ color: '#f0ece4' }}
             >
-              <X size={14} /> CANCEL
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="flex-1 py-2.5 rounded-xl font-display font-bold text-sm tracking-wide flex items-center justify-center gap-1.5"
-              style={{ background: '#4a7c59', color: '#fff' }}
-            >
-              <Check size={14} /> CONFIRM
-            </button>
+              {pendingAction.displayText}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="flex-1 py-3 rounded-xl font-display font-bold text-sm tracking-wide text-muted flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                style={{ background: '#2a2a2a' }}
+              >
+                <X size={14} /> CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="flex-1 py-3 rounded-xl font-display font-bold text-sm tracking-wide flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                style={{ background: '#4a7c59', color: '#fff' }}
+              >
+                <Check size={14} /> CONFIRM
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Input bar */}
       <div
-        className="px-3 py-2.5"
+        className="shrink-0 px-3 py-2.5"
         style={{ background: '#141414', borderTop: '1px solid rgba(201,150,58,0.15)' }}
       >
         {isListening && (

@@ -205,6 +205,14 @@ export function SettingsPage() {
         <Card>
           <h3 className="text-sm font-medium mb-3">Data</h3>
           <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => navigate('/body')}
+              className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm"
+            >
+              <Check size={16} className="text-gold" />
+              Edit start baseline (Body tab)
+            </button>
             <button onClick={handleExport} className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm">
               <Download size={16} className="text-gold" />
               Export Full Backup

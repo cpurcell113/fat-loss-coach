@@ -3,10 +3,11 @@ import { useBodyComp } from '../hooks/useBodyComp';
 import { useProjections } from '../hooks/useProjections';
 import { PageHeader } from '../components/layout/PageHeader';
 import { WeightTrendChart } from '../components/charts/WeightTrendChart';
-import { BASELINE, TARGETS, HISTORICAL_PEAK } from '../constants/baseline';
+import { TARGETS } from '../constants/baseline';
+import { resolveBaseline, resolvePeak } from '../utils/baseline';
 import type { BodyCompEntry } from '../types';
 import { today, formatDisplay } from '../utils/date-helpers';
-import { Trash2, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Info, Pencil } from 'lucide-react';
 
 function StatCard({
   label, value, unit, sub, color,
@@ -25,10 +26,13 @@ function StatCard({
 }
 
 export function BodyPage() {
-  const { entries, add, remove, latest } = useBodyComp();
+  const { entries, add, update, remove, latest } = useBodyComp();
   const projections = useProjections(entries);
+  const baseline = resolveBaseline(entries);
+  const peak = resolvePeak(entries);
 
   const [showForm, setShowForm] = useState(false);
+  const [editingBaseline, setEditingBaseline] = useState(false);
   const [weight, setWeight] = useState('');
   const [smm, setSmm] = useState('');
   const [bf, setBf] = useState('');
@@ -37,28 +41,71 @@ export function BodyPage() {
   const [saved, setSaved] = useState(false);
   const [showEcwInfo, setShowEcwInfo] = useState(false);
 
-  const fatLost = latest ? +(BASELINE.weight - latest.weight).toFixed(1) : null;
-  const muscleDelta = latest?.muscleMass ? +(latest.muscleMass - BASELINE.muscleMass).toFixed(1) : null;
+  const fatLost = latest ? +(baseline.weight - latest.weight).toFixed(1) : null;
+  const muscleDelta = latest?.muscleMass ? +(latest.muscleMass - baseline.muscleMass).toFixed(1) : null;
   const ecwColor = (latest?.ecwRatio ?? 0) >= TARGETS.ecwRatioWarning ? '#8b3a3a' : '#4a7c59';
+
+  const openBaselineEdit = () => {
+    setEditingBaseline(true);
+    setShowForm(true);
+    setWeight(String(baseline.weight));
+    setSmm(String(baseline.muscleMass));
+    setBf(String(baseline.bodyFatPercent));
+    setEcw(String(baseline.ecwRatio));
+    setNotes(baseline.label);
+  };
+
+  const openNewScan = () => {
+    if (showForm && !editingBaseline) {
+      setShowForm(false);
+      return;
+    }
+    setEditingBaseline(false);
+    setShowForm(true);
+    setWeight(''); setSmm(''); setBf(''); setEcw(''); setNotes('');
+  };
 
   const handleSave = () => {
     const w = parseFloat(weight);
     if (isNaN(w)) return;
-    const entry: BodyCompEntry = {
-      id: crypto.randomUUID(),
-      date: today(),
-      weight: w,
-      muscleMass: smm ? parseFloat(smm) : null,
-      bodyFatPercent: bf ? parseFloat(bf) : null,
-      ecwRatio: ecw ? parseFloat(ecw) : null,
-      notes,
-      source: 'inbody',
-      createdAt: new Date().toISOString(),
-    };
-    add(entry);
+
+    if (editingBaseline) {
+      const existing = entries.find(e => e.id === 'baseline');
+      const entry: BodyCompEntry = {
+        id: 'baseline',
+        date: existing?.date ?? today(),
+        weight: w,
+        muscleMass: smm ? parseFloat(smm) : null,
+        bodyFatPercent: bf ? parseFloat(bf) : null,
+        ecwRatio: ecw ? parseFloat(ecw) : null,
+        notes: notes || 'Start baseline',
+        source: 'inbody',
+        createdAt: existing?.createdAt || new Date().toISOString(),
+      };
+      if (existing) update('baseline', entry);
+      else add(entry);
+    } else {
+      const entry: BodyCompEntry = {
+        id: crypto.randomUUID(),
+        date: today(),
+        weight: w,
+        muscleMass: smm ? parseFloat(smm) : null,
+        bodyFatPercent: bf ? parseFloat(bf) : null,
+        ecwRatio: ecw ? parseFloat(ecw) : null,
+        notes,
+        source: 'inbody',
+        createdAt: new Date().toISOString(),
+      };
+      add(entry);
+    }
+
     setSaved(true);
     setWeight(''); setSmm(''); setBf(''); setEcw(''); setNotes('');
-    setTimeout(() => { setSaved(false); setShowForm(false); }, 1200);
+    setTimeout(() => {
+      setSaved(false);
+      setShowForm(false);
+      setEditingBaseline(false);
+    }, 1200);
   };
 
   const sortedEntries = [...entries].sort((a, b) => b.date.localeCompare(a.date));
@@ -75,10 +122,18 @@ export function BodyPage() {
             <p className="text-xs text-muted">Goal: May 12</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-3" style={{ background: '#222', border: '1px solid #333' }}>
-              <p className="text-[10px] text-muted mb-1">{BASELINE.label}</p>
-              <p className="text-xs font-medium" style={{ color: '#f0ece4' }}>{BASELINE.weight} lbs · {BASELINE.bodyFatPercent}% BF</p>
-              <p className="text-[10px] text-muted">SMM {BASELINE.muscleMass} lbs</p>
+            <div className="rounded-xl p-3 relative" style={{ background: '#222', border: '1px solid #333' }}>
+              <button
+                type="button"
+                onClick={openBaselineEdit}
+                className="absolute top-2 right-2 p-1 text-muted"
+                aria-label="Edit baseline"
+              >
+                <Pencil size={12} />
+              </button>
+              <p className="text-[10px] text-muted mb-1">{baseline.label}</p>
+              <p className="text-xs font-medium" style={{ color: '#f0ece4' }}>{baseline.weight} lbs · {baseline.bodyFatPercent}% BF</p>
+              <p className="text-[10px] text-muted">SMM {baseline.muscleMass} lbs</p>
             </div>
             <div className="rounded-xl p-3" style={{ background: '#222', border: '1px solid rgba(201,150,58,0.3)' }}>
               <p className="text-[10px]" style={{ color: '#c9963a' }}>Goal</p>
@@ -94,7 +149,7 @@ export function BodyPage() {
             label="Fat Lost"
             value={fatLost !== null ? (fatLost > 0 ? `-${fatLost}` : `+${Math.abs(fatLost)}`) : '--'}
             unit="lbs"
-            sub={`since ${formatDisplay(BASELINE.date)}`}
+            sub={`since ${formatDisplay(baseline.date)}`}
             color={fatLost && fatLost > 0 ? '#4a7c59' : '#c9963a'}
           />
           <StatCard
@@ -162,17 +217,19 @@ export function BodyPage() {
           <div className="flex gap-4 text-sm">
             <div>
               <p className="text-[10px] text-muted">Aug 2025 Peak</p>
-              <p className="font-number font-bold" style={{ color: '#c9963a' }}>{HISTORICAL_PEAK.weight} lbs</p>
-              <p className="text-[10px] text-muted">{HISTORICAL_PEAK.bodyFatPercent}% BF · SMM {HISTORICAL_PEAK.muscleMass}</p>
+              <p className="font-number font-bold" style={{ color: '#c9963a' }}>{peak.weight} lbs</p>
+              <p className="text-[10px] text-muted">{peak.bodyFatPercent}% BF · SMM {peak.muscleMass}</p>
             </div>
             <div className="w-px" style={{ background: '#2a2a2a' }} />
             <div>
               <p className="text-[10px] text-muted">Now vs. Peak</p>
               <p className="font-number font-bold" style={{ color: '#f0ece4' }}>
-                {latest ? `+${(latest.weight - HISTORICAL_PEAK.weight).toFixed(1)}` : '--'} lbs
+                {latest ? `${latest.weight - peak.weight >= 0 ? '+' : ''}${(latest.weight - peak.weight).toFixed(1)}` : '--'} lbs
               </p>
               <p className="text-[10px] text-muted">
-                {latest?.muscleMass ? `+${(latest.muscleMass - HISTORICAL_PEAK.muscleMass).toFixed(1)} lbs muscle` : ''}
+                {latest?.muscleMass
+                  ? `${latest.muscleMass - peak.muscleMass >= 0 ? '+' : ''}${(latest.muscleMass - peak.muscleMass).toFixed(1)} lbs muscle`
+                  : ''}
               </p>
             </div>
           </div>
@@ -180,17 +237,20 @@ export function BodyPage() {
 
         {/* Add scan */}
         <button
-          onClick={() => setShowForm(s => !s)}
+          type="button"
+          onClick={openNewScan}
           className="w-full py-3 rounded-xl font-display font-bold text-sm tracking-wide flex items-center justify-center gap-2"
           style={{ background: '#1a1a1a', border: '1px dashed rgba(201,150,58,0.4)', color: '#c9963a' }}
         >
-          {showForm ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          {showForm ? 'CANCEL' : 'ADD NEW SCAN'}
+          {showForm && !editingBaseline ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {showForm && !editingBaseline ? 'CANCEL' : 'ADD NEW SCAN'}
         </button>
 
         {showForm && (
           <div className="rounded-xl p-4 space-y-4" style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.25)' }}>
-            <h3 className="font-display font-bold text-sm tracking-wide" style={{ color: '#c9963a' }}>NEW InBody SCAN</h3>
+            <h3 className="font-display font-bold text-sm tracking-wide" style={{ color: '#c9963a' }}>
+              {editingBaseline ? 'EDIT START BASELINE' : 'NEW InBody SCAN'}
+            </h3>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: 'Weight (lbs) *', value: weight, set: setWeight, placeholder: '248.7' },
@@ -221,12 +281,13 @@ export function BodyPage() {
               style={{ background: '#2a2a2a', color: '#f0ece4' }}
             />
             <button
+              type="button"
               onClick={handleSave}
               disabled={!weight}
               className="w-full py-3 rounded-xl font-display font-bold text-sm tracking-wide text-black disabled:opacity-40 active:scale-[0.98] transition-all"
               style={{ background: saved ? '#4a7c59' : '#c9963a', color: saved ? '#fff' : '#000' }}
             >
-              {saved ? '✓ SCAN SAVED' : 'SAVE SCAN'}
+              {saved ? '✓ SAVED' : editingBaseline ? 'SAVE BASELINE' : 'SAVE SCAN'}
             </button>
           </div>
         )}
