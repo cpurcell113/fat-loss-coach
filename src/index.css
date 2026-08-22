@@ -74,6 +74,11 @@ input[type="number"] {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
 }
 
+/* Hide tab bar while a full-screen sheet is open (see SheetPortal) */
+body.sheet-open [data-bottom-nav] {
+  display: none !important;
+}
+
 .text-gold-gradient {
   background: linear-gradient(135deg, #c9963a, #e8c070, #c9963a);
   -webkit-background-clip: text;

@@ -12,7 +12,8 @@ const tabs = [
 export function BottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 pb-safe"
+      data-bottom-nav
+      className="fixed bottom-0 left-0 right-0 z-40 pb-safe"
       style={{ background: '#141414', borderTop: '1px solid rgba(201,150,58,0.15)' }}
     >
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto">

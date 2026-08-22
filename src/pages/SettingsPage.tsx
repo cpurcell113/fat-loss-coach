@@ -207,11 +207,11 @@ export function SettingsPage() {
           <div className="space-y-2">
             <button
               type="button"
-              onClick={() => navigate('/body')}
+              onClick={() => navigate('/body?editBaseline=1')}
               className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm"
             >
               <Check size={16} className="text-gold" />
-              Edit start baseline (Body tab)
+              Edit start baseline
             </button>
             <button onClick={handleExport} className="flex items-center gap-3 w-full py-2.5 px-3 bg-surface-alt rounded-lg text-sm">
               <Download size={16} className="text-gold" />
