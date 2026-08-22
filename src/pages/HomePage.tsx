@@ -8,13 +8,19 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useStreaks } from '../hooks/useStreaks';
 import { useProjections } from '../hooks/useProjections';
 import { getSettings } from '../data/storage';
-import { BASELINE, TARGETS, PROTEIN_TARGET } from '../constants/baseline';
+import { TARGETS, PROTEIN_TARGET } from '../constants/baseline';
 import { CALORIE_RANGE } from '../constants/macros';
+import { resolveBaseline } from '../utils/baseline';
+import {
+  calculateReadinessScore,
+  readinessLabel,
+  readinessColor,
+} from '../utils/readiness';
 import type { AppSettings, DailyCheckIn } from '../types';
 import { today, formatDisplay } from '../utils/date-helpers';
 import { Settings, ChevronRight, Flame, Zap, Moon } from 'lucide-react';
 
-// ─── Check-In Modal ────────────────────────────────────────────────────────────
+// ─── Check-In Modal (iPhone-safe: scroll body + sticky actions) ───────────────
 function CheckInModal({
   onComplete,
   onDismiss,
@@ -26,9 +32,18 @@ function CheckInModal({
   const [sleepQuality, setSleepQuality] = useState(3);
   const [energyLevel, setEnergyLevel] = useState(7);
   const [stressLevel, setStressLevel] = useState(4);
+  const [soreness, setSoreness] = useState(3);
   const [stressSource, setStressSource] = useState('All clear');
   const [fastingStatus, setFastingStatus] = useState<'fasting' | 'window-open'>('fasting');
   const [oneWord, setOneWord] = useState('');
+
+  const liveScore = calculateReadinessScore({
+    sleepHours,
+    sleepQuality,
+    energyLevel,
+    stressLevel,
+    soreness,
+  });
 
   const handleSubmit = () => {
     onComplete({
@@ -39,7 +54,7 @@ function CheckInModal({
       stressSource: stressLevel > 5 ? stressSource : null,
       fastingStatus,
       oneWord,
-      soreness: 3,
+      soreness,
       hunger: 3,
       mood: Math.round(energyLevel / 2),
       digestion: 3,
@@ -53,18 +68,63 @@ function CheckInModal({
   const stressSources = ['Work', 'Financial', 'Family', 'Health', 'All clear'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <div className="w-full max-w-lg rounded-t-3xl p-6 pb-10" style={{ background: '#1a1a1a' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: 'rgba(0,0,0,0.85)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkin-title"
+    >
+      <div
+        className="w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden"
+        style={{
+          background: '#1a1a1a',
+          maxHeight: 'min(92dvh, 100%)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        {/* Sticky header with Skip always visible */}
+        <div
+          className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0"
+          style={{ borderBottom: '1px solid #2a2a2a' }}
+        >
           <div>
-            <h2 className="font-display text-2xl font-bold text-gold tracking-wide">DAILY CHECK-IN</h2>
+            <h2 id="checkin-title" className="font-display text-2xl font-bold text-gold tracking-wide">
+              DAILY CHECK-IN
+            </h2>
             <p className="text-xs text-muted mt-0.5">{formatDisplay(today())}</p>
           </div>
-          <button onClick={onDismiss} className="text-muted text-sm">Skip</button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="px-3 py-2 text-sm font-medium text-muted rounded-lg active:opacity-70"
+            style={{ background: '#2a2a2a' }}
+          >
+            Skip
+          </button>
         </div>
 
-        <div className="space-y-5">
+        {/* Scrollable fields */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-5">
+          {/* Live readiness preview */}
+          <div
+            className="rounded-xl p-3 flex items-center justify-between"
+            style={{ background: '#222', border: `1px solid ${readinessColor(liveScore)}33` }}
+          >
+            <div>
+              <p className="text-[10px] text-muted uppercase tracking-wider">Readiness</p>
+              <p className="text-xs text-muted">Updates as you adjust</p>
+            </div>
+            <div className="text-right">
+              <p className="font-number font-bold text-2xl leading-none" style={{ color: readinessColor(liveScore) }}>
+                {liveScore}
+              </p>
+              <p className="text-[10px] mt-0.5" style={{ color: readinessColor(liveScore) }}>
+                {readinessLabel(liveScore)}
+              </p>
+            </div>
+          </div>
+
           {/* Sleep */}
           <div>
             <div className="flex justify-between items-center mb-1">
@@ -80,9 +140,13 @@ function CheckInModal({
             <div className="flex justify-between mt-2">
               <span className="text-xs text-muted">Quality</span>
               <div className="flex gap-1">
-                {[1,2,3,4,5].map(n => (
-                  <button key={n} onClick={() => setSleepQuality(n)}
-                    className={`text-lg ${n <= sleepQuality ? 'text-gold' : 'text-muted'}`}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setSleepQuality(n)}
+                    className={`text-lg ${n <= sleepQuality ? 'text-gold' : 'text-muted'}`}
+                  >
                     ★
                   </button>
                 ))}
@@ -124,17 +188,34 @@ function CheckInModal({
             </div>
           </div>
 
-          {/* Stress source (only if stress > 5) */}
+          {/* Soreness */}
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-sm font-medium">Soreness</label>
+              <span className="font-number text-gold text-sm">{soreness}/10</span>
+            </div>
+            <input
+              type="range" min={1} max={10} step={1}
+              value={soreness}
+              onChange={e => setSoreness(Number(e.target.value))}
+              className="w-full accent-gold"
+            />
+            <div className="flex justify-between text-xs text-muted">
+              <span>Fresh</span><span>Wrecked</span>
+            </div>
+          </div>
+
           {stressLevel > 5 && (
             <div>
               <label className="text-xs text-muted mb-2 block">Stress source</label>
               <div className="flex flex-wrap gap-2">
                 {stressSources.map(s => (
-                  <button key={s} onClick={() => setStressSource(s)}
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStressSource(s)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      stressSource === s
-                        ? 'bg-gold text-black'
-                        : 'text-muted'
+                      stressSource === s ? 'bg-gold text-black' : 'text-muted'
                     }`}
                     style={stressSource !== s ? { background: '#2a2a2a' } : {}}
                   >
@@ -145,12 +226,14 @@ function CheckInModal({
             </div>
           )}
 
-          {/* Fasting status */}
           <div>
             <label className="text-xs text-muted mb-2 block">Fasting status</label>
             <div className="flex gap-2">
               {(['fasting', 'window-open'] as const).map(s => (
-                <button key={s} onClick={() => setFastingStatus(s)}
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFastingStatus(s)}
                   className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${
                     fastingStatus === s ? 'bg-gold text-black' : 'text-muted'
                   }`}
@@ -162,7 +245,6 @@ function CheckInModal({
             </div>
           </div>
 
-          {/* One word */}
           <div>
             <label className="text-xs text-muted mb-1 block">One word — how are you showing up today?</label>
             <input
@@ -177,13 +259,20 @@ function CheckInModal({
           </div>
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className="w-full mt-6 py-3.5 rounded-xl font-display font-bold text-lg tracking-wider text-black active:scale-[0.98] transition-all"
-          style={{ background: '#c9963a' }}
+        {/* Sticky confirm — always on screen */}
+        <div
+          className="shrink-0 px-5 pt-3 pb-4"
+          style={{ borderTop: '1px solid #2a2a2a', background: '#1a1a1a' }}
         >
-          SET THE DAY
-        </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full py-3.5 rounded-xl font-display font-bold text-lg tracking-wider text-black active:scale-[0.98] transition-all"
+            style={{ background: '#c9963a' }}
+          >
+            SET THE DAY · {liveScore}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -218,10 +307,10 @@ export function HomePage() {
   const { currentWeek, totalWeeks, daysRemaining, progressPercent } = useCountdown();
   const { morningStreak, proteinStreak, sprintWeek } = useStreaks(checkIns, nutrition, sprints);
   const projections = useProjections(bodyComp);
+  const baseline = resolveBaseline(bodyComp);
 
   const [showCheckIn, setShowCheckIn] = useState(false);
 
-  // Auto-trigger check-in on first open each day
   useEffect(() => {
     const dismissKey = `checkin_dismissed_${today()}`;
     const wasDismissed = localStorage.getItem(dismissKey);
@@ -281,14 +370,24 @@ export function HomePage() {
   }
 
   const schedule = getTodaySchedule();
-  const weightDelta = latest ? +(latest.weight - BASELINE.weight).toFixed(1) : null;
+  const weightDelta = latest ? +(latest.weight - baseline.weight).toFixed(1) : null;
   const proteinHit = todayNutrition && todayNutrition.protein >= PROTEIN_TARGET;
+  const readiness = todayCheckIn
+    ? calculateReadinessScore({
+        sleepHours: todayCheckIn.sleepHours,
+        sleepQuality: todayCheckIn.sleepQuality,
+        energyLevel: todayCheckIn.energyLevel,
+        stressLevel: todayCheckIn.stressLevel,
+        soreness: todayCheckIn.soreness,
+      })
+    : null;
 
   return (
     <div className="overflow-y-auto">
       {/* Covenant Header */}
       <div className="px-5 pt-6 pb-4 relative">
         <button
+          type="button"
           onClick={() => navigate('/settings')}
           className="absolute top-5 right-4 p-2 text-muted"
         >
@@ -301,6 +400,57 @@ export function HomePage() {
           I didn't do.
         </div>
         <p className="text-xs text-muted mt-2">{formatDisplay(today())}</p>
+      </div>
+
+      {/* Readiness Score */}
+      <div className="px-4 mb-3">
+        {readiness !== null ? (
+          <div
+            className="rounded-xl p-4 flex items-center gap-4"
+            style={{ background: '#1a1a1a', border: `1px solid ${readinessColor(readiness)}44` }}
+          >
+            <div
+              className="w-16 h-16 rounded-full flex flex-col items-center justify-center shrink-0"
+              style={{
+                border: `3px solid ${readinessColor(readiness)}`,
+                boxShadow: `0 0 0 4px ${readinessColor(readiness)}22`,
+              }}
+            >
+              <span className="font-number font-bold text-xl leading-none" style={{ color: readinessColor(readiness) }}>
+                {readiness}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-muted uppercase tracking-widest">Readiness Score</p>
+              <p className="font-display font-bold text-lg tracking-wide" style={{ color: readinessColor(readiness) }}>
+                {readinessLabel(readiness).toUpperCase()}
+              </p>
+              <p className="text-xs text-muted truncate">
+                Sleep {todayCheckIn!.sleepHours}h · Energy {todayCheckIn!.energyLevel}/10 · Stress {todayCheckIn!.stressLevel}/10
+              </p>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowCheckIn(true)}
+            className="w-full rounded-xl p-4 text-left active:scale-[0.99] transition-transform flex items-center gap-4"
+            style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.35)' }}
+          >
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center shrink-0"
+              style={{ border: '3px dashed #4a4845' }}
+            >
+              <span className="font-number text-muted text-lg">--</span>
+            </div>
+            <div>
+              <p className="font-display font-bold text-sm tracking-wide" style={{ color: '#c9963a' }}>
+                READINESS SCORE
+              </p>
+              <p className="text-xs text-muted mt-0.5">Check in to unlock today’s score.</p>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* 90-Day Progress */}
@@ -343,14 +493,14 @@ export function HomePage() {
             label: 'Body Fat',
             value: latest?.bodyFatPercent ? `${latest.bodyFatPercent.toFixed(1)}` : '--',
             unit: '%',
-            delta: latest?.bodyFatPercent ? +(latest.bodyFatPercent - BASELINE.bodyFatPercent).toFixed(1) : null,
+            delta: latest?.bodyFatPercent ? +(latest.bodyFatPercent - baseline.bodyFatPercent).toFixed(1) : null,
             good: 'down',
           },
           {
             label: 'Muscle',
             value: latest?.muscleMass ? `${latest.muscleMass.toFixed(1)}` : '--',
             unit: 'lbs',
-            delta: latest?.muscleMass ? +(latest.muscleMass - BASELINE.muscleMass).toFixed(1) : null,
+            delta: latest?.muscleMass ? +(latest.muscleMass - baseline.muscleMass).toFixed(1) : null,
             good: 'up',
           },
         ].map(s => (
@@ -380,7 +530,7 @@ export function HomePage() {
             <h2 className="font-display font-bold text-base tracking-wide" style={{ color: '#c9963a' }}>
               TODAY'S PLAN
             </h2>
-            <button onClick={() => navigate('/train')} className="text-muted">
+            <button type="button" onClick={() => navigate('/train')} className="text-muted">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -417,7 +567,7 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Check-In Directive */}
+      {/* Check-In summary (when done) or prompt */}
       {todayCheckIn ? (
         <div className="px-4 mb-3">
           <div className="rounded-xl p-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
@@ -425,7 +575,7 @@ export function HomePage() {
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#c9963a' }} />
               <p className="text-xs font-medium text-muted uppercase tracking-wider">Check-In Complete</p>
             </div>
-            <div className="flex gap-4 text-sm">
+            <div className="flex gap-4 text-sm flex-wrap">
               <div>
                 <p className="text-muted text-xs">Sleep</p>
                 <p className="font-number font-semibold">{todayCheckIn.sleepHours}h</p>
@@ -437,6 +587,10 @@ export function HomePage() {
               <div>
                 <p className="text-muted text-xs">Stress</p>
                 <p className="font-number font-semibold">{todayCheckIn.stressLevel}/10</p>
+              </div>
+              <div>
+                <p className="text-muted text-xs">Soreness</p>
+                <p className="font-number font-semibold">{todayCheckIn.soreness}/10</p>
               </div>
               {todayCheckIn.oneWord && (
                 <div>
@@ -450,6 +604,7 @@ export function HomePage() {
       ) : (
         <div className="px-4 mb-3">
           <button
+            type="button"
             onClick={() => setShowCheckIn(true)}
             className="w-full rounded-xl p-4 text-left active:scale-[0.99] transition-transform"
             style={{ background: '#1a1a1a', border: '1px solid rgba(201,150,58,0.3)' }}
@@ -486,6 +641,7 @@ export function HomePage() {
       {/* Quick Nav */}
       <div className="px-4 mb-6 grid grid-cols-2 gap-2">
         <button
+          type="button"
           onClick={() => navigate('/projections')}
           className="rounded-xl p-3 text-left"
           style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
@@ -497,6 +653,7 @@ export function HomePage() {
           <p className="text-[10px] text-muted">Goal: {TARGETS.bodyFatPercent}%</p>
         </button>
         <button
+          type="button"
           onClick={() => navigate('/bloodwork')}
           className="rounded-xl p-3 text-left"
           style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
@@ -509,7 +666,6 @@ export function HomePage() {
         </button>
       </div>
 
-      {/* Check-in modal */}
       {showCheckIn && (
         <CheckInModal
           onComplete={handleCheckInComplete}
